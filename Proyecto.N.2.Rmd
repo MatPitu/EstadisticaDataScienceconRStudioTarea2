@@ -1,0 +1,2499 @@
+---
+title: "Proyecto N° 2"
+author: "Carla Chávez / Ricardo Gónzales / Mateo Cornejo"
+date: "18/3/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# **Caso N° 2: Estado Nutricional - Diabetes**
+
+Se tiene un conjunto de datos reales con información recogida de jóvenes entre 12 y 17 años de edad, posiblemente que están cursando la educación secundaria, el objetivo es desarrollar una segmentación (Kmeans) y un modelo predictivo (regresión logística) para determinar la probabilidad de tener o no diabetes. La variable "Target", representa el estado binario de "No Tiene Diabetes" 0 y "Tiene Diabetes 1".
+
+
+## **Establecemos nuestra ruta de trabajo: **
+```{r Ruta de trabajo}
+setwd('C:/Estadistica.Data.Science.R/Proyecto.80pct')
+getwd()
+```
+
+## **Importar la base de datos de nuestro proyecto: **
+```{r Import}
+library(readxl) # Utilizamos la librería readxl
+DatosEstadoNutricional <- read_excel("Datos/Caso. Data_Nutricion.xlsx")
+```
+
+
+## **Vizualizamos los 6 primeros registros: **
+```{r Previzualization}
+head(DatosEstadoNutricional)
+```
+
+Con esta primera vista de los datos, podemos tener una idea de la estructura de la tabla:
+- Se observan las variables, el número de ellas que son 23 y su tipo.
+- Se observan los datos y como es el tipo de variable que la representan.
+- y se va aclarando una idea de la forma que debería tener la tabla. 
+
+En la siguiente salida revisaremos esta estructura.
+
+
+## **Estructura de la base de datos: **
+```{r Structure}
+str(DatosEstadoNutricional)
+```
+
+Revisando la estructura de la tabla encontramos lo siguiente:
+
+#### **Dimensiones:**
+- Nuestra base de datos tiene 652 registros y 23 variables. También se podría obtener con dim(DatosEstadoNutricional).
+
+
+## **Descripción de las Variables:**
+
+### **Variables con el formato (tipo de variable) correcto**
+
+###### **N°:** Identificador del individuo. --> Podríamos convertirlo a caracter, pero luego lo eliminaremos porque no brinda información para crear modelos.
+###### **Individuo:** Otro Identificador del individuo es el concatenado de "Persona" + "N°".
+###### **talla:** Talla del individuo (expresado en centímetros).
+
+###### **circun_cuello:** Circunferencia del cuello del individuo (expresado en centímetros).
+###### **IMC:** Índice de Masa Corporal del individuo (expresado en Kg/m^2) --> (Peso_Kg / (talla/100)^2).
+###### **circun_cintura:** Circunferencia de la cintura del inviduo (expresado en centímetros).
+###### **ind_cintura_cadera:** Índice Cintura-Cadera (ICC) --> (circun_cintura (cm)/ cadera (cm)).
+###### **ind_cintura_estatura:** Índice Cintura-Estatura (ICE) --> (circun_cintura (cm)/ talla (cm)).
+###### **por_grasa_corporal:** Porcentaje de grasa corporal --> (ind_cintura_cadera (cm)/ (talla * talla^(1/2)) (cm^3/2) - 18). **Nota: Existen muchas formas de calcularlo, pero esta es la más conocida.)
+###### **masa_corporal_magra_kg:** Masa corporal magra del inviduo (expresado en kilogrados) --> (hombre) = [1,10 x peso (kg)] - 128 x {peso (Kg)2 (al cuadrado) / Altura (cm)2 (al cuadrado)}. --> (mujer) = [1,07 x peso (kg)] - 148 x {peso (Kg)2 (al cuadrado) / Altura (cm)]2 (al cuadrado)}.
+
+
+
+### **Variables sin el formato (tipo de variable) correcto--> Convertir**
+
+###### **sexo:** Sexo del individuo. Debemos convertirlo a factor, para poder tener frecuencia cuando hagamos un resumen de datos.
+###### **edad:** Edad del individuo (expresado en años). Como se observa esta variable es un entero. Debemos convertir esta vaiable a Entero.
+###### **peso_kg:** Peso del individuo (expresado en kilogramos). Debemos convertir esta variable a Numérico.
+###### **cadera:** Circunferencia de la cadera del inviduo (expresado en centímetros). Debemos convertir esta variable a Numérico.
+###### **pliegue_cutaneo_BICEPS:**  Valor que indica la cantidad de tejido adiposo subcutáneo en biceps del individuo (expresado en milímetros). Debemos convertir esta variable a Numérico.
+###### **pliegue_cutaneo_TRICEPS:**  Valor que indica la cantidad de tejido adiposo subcutáneo en biceps del individuo (expresado en milímetros). Debemos convertir esta variable a Numérico.
+###### **pliegue_cutaneo_ESCAPULAR:**  Valor que indica la cantidad de tejido adiposo subcutáneo en biceps del individuo (expresado en milímetros). Debemos convertir esta variable a Numérico.
+###### **pliegue_cutaneo_SUPRAILIACO:**  Valor que indica la cantidad de tejido adiposo subcutáneo en biceps del individuo (expresado en milímetros). Debemos convertir esta variable a Numérico.
+###### **clasif_diagnos_talla_edad:** Clasificación del diagnóstico Talla-Edad. Debemos convertirlo a factor, para poder tener frecuencia cuando hagamos un resumen de datos.
+###### **clasif_diagnos_IMC:** Clasificación del diagnóstico del IMC. Debemos convertirlo a factor, para poder tener frecuencia cuando hagamos un resumen de datos.
+###### **clasif_perimetro_abdominal:** Clasificación del Perímetro Abdominal. Debemos convertirlo a factor, para poder tener frecuencia cuando hagamos un resumen de datos.
+###### **clasif_anemia:** Clasificación de Anemias. Debemos convertirlo a factor, para poder tener frecuencia cuando hagamos un resumen de datos.
+###### **target:** Es nuestra variable objetivo. 0: No Tiene Diabetes, 1: Tiene Diabetes. Debemos convertir esta variable a Factor.
+
+
+
+## **Conversión del Tipo de variables: **
+```{r Convert of Variables}
+
+DatosEstadoNutricional$sexo <- as.factor(as.character(DatosEstadoNutricional$sexo)) 
+DatosEstadoNutricional$edad <- as.integer(DatosEstadoNutricional$edad) 
+DatosEstadoNutricional$peso_kg <- as.numeric(DatosEstadoNutricional$peso_kg) 
+DatosEstadoNutricional$cadera <- as.numeric(DatosEstadoNutricional$cadera) 
+DatosEstadoNutricional$pliegue_cutaneo_BICEPS <- as.numeric(DatosEstadoNutricional$pliegue_cutaneo_BICEPS) 
+DatosEstadoNutricional$pliegue_cutaneo_TRICEPS <- as.numeric(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS) 
+DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR <- as.numeric(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR) 
+DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO <- as.numeric(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO)
+DatosEstadoNutricional$clasif_diagnos_talla_edad <- as.factor(as.character(DatosEstadoNutricional$clasif_diagnos_talla_edad)) 
+DatosEstadoNutricional$clasif_diagnos_IMC <- as.factor(as.character(DatosEstadoNutricional$clasif_diagnos_IMC)) 
+DatosEstadoNutricional$clasif_perimetro_abdominal <- as.factor(as.character(DatosEstadoNutricional$clasif_perimetro_abdominal)) 
+DatosEstadoNutricional$clasif_anemia <- as.factor(as.character(DatosEstadoNutricional$clasif_anemia)) 
+DatosEstadoNutricional$target <- as.factor(as.character(DatosEstadoNutricional$target)) 
+
+str(DatosEstadoNutricional)
+```
+Ahora las variables tienen su correcto tipo de datos y le hemos dado valor, más adelante trabajaremos las variables en caracter para convertirlas en dummies y podamos utilizarlas en los modelos. Revisemos la variable target.
+
+
+
+
+## **Target: Indicador de Tenencia de Diabetes: **
+```{r Frequency of Target}
+table(DatosEstadoNutricional$target)
+round(table(DatosEstadoNutricional$target) / nrow(DatosEstadoNutricional) * 100, 2)
+```
+
+Podemos obsevar que hay 652 casos con etiquetas (si/no). Existe una proporción de 18.7% individuo con diabetes y 81.3% sin diabetes. Dependiendo del modelo que vayamos a elegir, por el momento no vemos ningún problema de balanceo, podemos consultar con algún especialista y verificar si es más o menos la proporción ideal o de ser necesario revisaremos el balanceo más adelante.
+
+
+## **APLICANDO ESTADÍSTICA DESCRIPTIVA Y ANÁLISIS EXPLORATORIO**
+
+
+
+#### **Resumen del dataset:**
+```{r Summary}
+summary(DatosEstadoNutricional)
+```
+
+Con este vistazo inicial de los datos, podemos ir analizando la información:
+
+**sexo**: Presenta 25 datos perdidos, podemos imputarlo por la Moda. El 58% (378) de individuos son mujeres.
+**talla**: Presenta 17 datos perdidos, podemos imputadorlo por la Media. No presenta indicios de outliers.
+**edad**: Presenta 3 datos perdidos (2 NA's y 1 con valor 0), podemos imputarlo por la Mediana o la Media (ambos son cercanos). Presentan valores entre 14 y 17. No presenta indicio de outliers, quizás exista poca variabilidad, pero ya lo veremos cuando revisemos su distribución.
+**peso_kg**: Presenta 5 datos perdidos, se sugiere imputar por la Mediana o Media (ambos son cercanos). Tiene indicios de ouliers por debajo o por encima (individuos con peso de 33.9Kg y 91.10Kg). Se debe revisar la distribución.
+**circun_cuello**: Presenta 7 datos perdidos, podemos imputarlo por la Mediana o la Media (ambos son cercanos). Posible indicio de outliers por abajo y por arriba. Se debe revisar la distribución.
+**IMC**: Presenta 1 dato perdido, se puede realizar el cálculo matemático con peso_kg y talla, o reemplazarlo con la Media o la Mediana, sería más fácil con el cálculo matemático si es no tiene esos datos perdidos en esos componentes. Se sugiere revisar la distribución.
+**circun_cintura**: Presenta 11 datos perdidos, podemos imputarlo para la Media o la Mediana. Presenta indicios de outilers hacia arriba. Se sugiere revisar la distribución.
+**cadera**: Presenta 2 datos perdidos, se sugiere imputar por la Mediana o Media (ambos son cercanos). Tiene indicios de ouliers por arriba. Se debe revisar la distribución.
+**ind_cintura_cadera**: Presenta 11 datos perdidos, podemos imputarlo por la Mediana o la Media (ambos son cercanos). Posible indicio de outliers por arriba. Se sugiere revisar la distribución.
+**ind_cintura_estatura**: Presenta 4 datos perdidos, se puede realizar el cálculo matemático con circun_cintura y talla, o reemplazarlo con la Media o la Mediana, sería más fácil con el cálculo matemático si es no tiene esos datos perdidos en esos componentes. Se sugiere revisar la distribución.
+**por_grasa_corporal**: Presenta 3 datos perdidos, podemos reemplazarlo por la Mediana. Existe indicio de outiers por arriba como por abajo. Se debe revisar la distribución.
+**masa_corporal_magra_kg**: Presenta 14 datos perdidos, se sugiere imputar por la Mediana. Tiene indicios de ouliers por arriba. Se debe revisar la distribución.
+**pliegue_cutaneo_BICEPS**: Presenta 5 datos perdidos, podemos imputarlo por la Mediana. Posible indicio de outliers por abajo y por arriba. Se debe revisar la distribución.
+**pliegue_cutaneo_TRICEPS**: Presenta 8 datos perdidos, se sugiere imputar por la Mediana. Posible indicio de outliers por abajo y por arriba. Se sugiere revisar la distribución.
+**pliegue_cutaneo_ESCAPULAR**: Presenta 6 datos perdidos, podemos reemplazarlo por la Mediana. Posible indicio de outliers por abajo y por arriba. Se sugiere revisar la distribución.
+**pliegue_cutaneo_SUPRAILIACO**: 214 datos perdidos, se sugiere imputar por la Mediana. Tiene indicios de ouliers por abajo y por arriba. Se sugiere revisar la distribución.
+**clasif_diagnos_talla_edad**: Presenta 6 datos perdidos, podemos imputarlo por la Moda y también juntar algunos niveles de la variable como Talla Baja y Talla Baja Severa (tiene 1 solo caso). Como alternativa también podemos revisar la tabla cruzada de talla y edad y ver si podemos imputar por el promedio en esos cruces.
+**clasif_diagnos_IMC**: Presenta 13 datos perdidos, podríamos imputar por la Moda, pero podríamos ver la distribución que tienen estas clases de acuerdo al IMC (promedio, mínimos, máximos). También podemos juntar algunos niveles (Delgadez sólamemte tiene 1 caso).
+**clasif_perimetro_abdominal**: Presenta 5 datos perdidos, podemos reemplazarlo por la Moda o revisar el cruce de esta variable con circun_cintura y/o cadera.
+**clasif_anemia**: Presenta 8 datos perdidos y 3 valores incorrectos, podemos reemplazarlo por la Moda o sólo tener 2 grupos en esta variable, como por ejemplo "Presenta Anemia" y "No Presenta Anemia".
+
+
+Realicemos una Imputación de las variables
+
+## **IMPUTACIÓN DE VARIABLES**
+
+```{r MissingValues}
+sum(is.na(DatosEstadoNutricional)) 
+sum(is.na(DatosEstadoNutricional)) / nrow(DatosEstadoNutricional)
+
+DatosEstadoNutricional$PresentanNAs <- !complete.cases(DatosEstadoNutricional)
+# DatosEstadoNutricional$PresentanNAs <- as.integer(DatosEstadoNutricional$PresentanNAs)
+
+sum(as.integer(DatosEstadoNutricional$PresentanNAs))
+```
+Aproximadamente el 23.8% de nuestros datos son datos perdidos en cualquier variable y en total tenemos 132 (20.2%) registros con datos completos. Por ello, debemos ser cuidadosos al momento de imputarlas.
+
+
+Como tenemos identificados a los 132 registros, vamos a realizar igualmente una imputación paramétrica
+
+```{r ImputacionParametrica}
+library(mlr) # Utilizamos la librería mlr
+DatosEstadoNutricional_imp <- impute(DatosEstadoNutricional, classes = list(factor = imputeMode(), 
+                                    integer = imputeMedian(),
+                                    numeric = imputeMean()),
+              dummy.classes = c("integer","factor"), dummy.type = "numeric")
+DatosEstadoNutricional_imp <- DatosEstadoNutricional_imp$data[,1:min(dim(DatosEstadoNutricional))]
+```
+
+```{r DataconValoresImputados}
+sum(is.na(DatosEstadoNutricional_imp))
+
+DatosEstadoNutricional <- DatosEstadoNutricional_imp
+DatosEstadoNutricional$edad <- as.integer(DatosEstadoNutricional$edad) 
+
+summary(DatosEstadoNutricional)
+```
+
+### **Edad tiene un registro con 0, es un valor atípico que podría alternarnos cualquier modelo, sobretodo los de regresión. Además que la edad era intera. Vamos a reemplazarlo con la mediana: **
+```{r Imputar Edad Anómalo}
+DatosEstadoNutricional$edad[DatosEstadoNutricional$edad == 0] <- median(DatosEstadoNutricional$edad)
+```
+
+
+
+
+
+### **1. Sexo: **
+
+#### **Frecuencia Absoluta y Frecuencia Relativa**
+```{r Descriptive of sexo 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest') # Utilizamos la librería modeest
+paste('Moda = ', mlv(DatosEstadoNutricional$sexo, method = "mfv", na.rm = T))
+
+table(DatosEstadoNutricional$sexo)
+round(table(DatosEstadoNutricional$sexo) / nrow(DatosEstadoNutricional) * 100, 2)
+
+a <- barplot(table(DatosEstadoNutricional$sexo), main = 'Frecuencia Abosoluta de la variable Sexo', col = rainbow(6))
+text(a, table(DatosEstadoNutricional$sexo) - 40, labels = table(DatosEstadoNutricional$sexo))
+
+b <- barplot(prop.table(table(DatosEstadoNutricional$sexo)), main = 'Frecuencia Relativa de la variable Sexo', col = rainbow(6))
+text(b, prop.table(table(DatosEstadoNutricional$sexo)) - 0.05, labels = round(prop.table(table(DatosEstadoNutricional$sexo)), 4)*100)
+
+```
+El 61.8% (403) casos son Mujeres y el completo 38.2% (249) son Hombres. Ahora sí la variable luce bien.
+
+
+### **2. Talla: **
+
+#### **Medidas de Tendencia Central y Medidas de Posición: **
+```{r Descriptive of talla 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$talla, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$talla, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$talla, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$talla, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$talla, main= "Histograma de la variable Talla")
+abline(v=mean(DatosEstadoNutricional$talla, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$talla, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$talla, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$talla, main= "Boxplot de la variable Talla")
+```
+
+
+#### **Medidas de Dispersión: **
+```{r Descriptive of Talla 2}
+paste('Desviación Estándar: ', sd(DatosEstadoNutricional$talla, na.rm = TRUE))
+paste('Varianza: ', sd(DatosEstadoNutricional$talla, na.rm = TRUE)^2)
+paste('Coeficiente de Variación: ', sd(DatosEstadoNutricional$talla, na.rm = TRUE) / mean(DatosEstadoNutricional$talla, na.rm = T) * 100)
+```
+
+
+#### **Asimetría y Curtosis: **
+```{r Descriptive of Talla 3}
+library(e1071)
+paste('Coeficiente de Asimetría: ', skewness(DatosEstadoNutricional$talla, na.rm = TRUE))
+paste('Coeficiente de Curtosis: ', kurtosis(DatosEstadoNutricional$talla, na.rm = TRUE))
+```
+
+
+
+### **3. Edad: **
+
+#### **Medidas de Tendencia Central y Medidas de Posición: **
+```{r Descriptive of edad 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$edad, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$edad, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$edad, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$edad, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$edad, main= "Histograma de la variable Edad")
+abline(v=mean(DatosEstadoNutricional$edad, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$edad, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$edad, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$edad, main= "Boxplot de la variable Edad")
+```
+
+
+#### **Medidas de Dispersión: **
+```{r Descriptive of Edad 2}
+paste('Desviación Estándar: ', sd(DatosEstadoNutricional$edad, na.rm = TRUE))
+paste('Varianza: ', sd(DatosEstadoNutricional$edad, na.rm = TRUE)^2)
+paste('Coeficiente de Variación: ', sd(DatosEstadoNutricional$edad, na.rm = TRUE) / mean(DatosEstadoNutricional$edad, na.rm = T) * 100)
+```
+
+
+#### **Asimetría y Curtosis: **
+```{r Descriptive of Edad 3}
+library(e1071)
+paste('Coeficiente de Asimetría: ', skewness(DatosEstadoNutricional$edad, na.rm = TRUE))
+paste('Coeficiente de Curtosis: ', kurtosis(DatosEstadoNutricional$edad, na.rm = TRUE))
+```
+
+
+
+### **4. Peso (Kg): **
+
+#### **Medidas de Tendencia Central y Medidas de Posición: **
+```{r Descriptive of peso_kg 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$peso_kg, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$peso_kg, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$peso_kg, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$peso_kg, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$peso_kg, main= "Histograma de la variable Peso (Kg)")
+abline(v=mean(DatosEstadoNutricional$peso_kg, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$peso_kg, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$peso_kg, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$peso_kg, main= "Boxplot de la variable Peso (Kg)")
+```
+
+
+#### **Medidas de Dispersión: **
+```{r Descriptive of peso_kg 2}
+paste('Desviación Estándar: ', sd(DatosEstadoNutricional$peso_kg, na.rm = TRUE))
+paste('Varianza: ', sd(DatosEstadoNutricional$peso_kg, na.rm = TRUE)^2)
+paste('Coeficiente de Variación: ', sd(DatosEstadoNutricional$peso_kg, na.rm = TRUE) / mean(DatosEstadoNutricional$peso_kg, na.rm = T) * 100)
+```
+
+
+#### **Asimetría y Curtosis: **
+```{r Descriptive of peso_kg 3}
+library(e1071)
+paste('Coeficiente de Asimetría: ', skewness(DatosEstadoNutricional$peso_kg, na.rm = TRUE))
+paste('Coeficiente de Curtosis: ', kurtosis(DatosEstadoNutricional$peso_kg, na.rm = TRUE))
+```
+
+
+
+### **5. Circunferencia del Cuello: **
+
+#### **Medidas de Tendencia Central y Medidas de Posición: **
+```{r Descriptive of circun_cuello 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$circun_cuello, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$circun_cuello, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$circun_cuello, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$circun_cuello, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$circun_cuello, main= "Histograma de la variable  Circunferencia del Cuello (cm)")
+abline(v=mean(DatosEstadoNutricional$circun_cuello, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$circun_cuello, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$circun_cuello, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$circun_cuello, main= "Boxplot de la variable  Circunferencia del Cuello (cm)")
+```
+
+
+#### **Medidas de Dispersión: **
+```{r Descriptive of circun_cuello 2}
+paste('Desviación Estándar: ', sd(DatosEstadoNutricional$circun_cuello, na.rm = TRUE))
+paste('Varianza: ', sd(DatosEstadoNutricional$circun_cuello, na.rm = TRUE)^2)
+paste('Coeficiente de Variación: ', sd(DatosEstadoNutricional$circun_cuello, na.rm = TRUE) / mean(DatosEstadoNutricional$circun_cuello, na.rm = T) * 100)
+```
+
+
+#### **Asimetría y Curtosis: **
+```{r Descriptive of circun_cuello 3}
+library(e1071)
+paste('Coeficiente de Asimetría: ', skewness(DatosEstadoNutricional$circun_cuello, na.rm = TRUE))
+paste('Coeficiente de Curtosis: ', kurtosis(DatosEstadoNutricional$circun_cuello, na.rm = TRUE))
+```
+
+
+
+### **6. Índice de Masa Corporal (IMC): **
+
+#### **Medidas de Tendencia Central y Medidas de Posición: **
+```{r Descriptive of IMC 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$IMC, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$IMC, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$IMC, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$IMC, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$IMC, main= "Histograma de la variable Índice de Masa Corporal (IMC)")
+abline(v=mean(DatosEstadoNutricional$IMC, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$IMC, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$IMC, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$IMC, main= "Boxplot de la variable Índice de Masa Corporal (IMC)")
+```
+
+
+#### **Medidas de Dispersión: **
+```{r Descriptive of IMC 2}
+paste('Desviación Estándar: ', sd(DatosEstadoNutricional$IMC, na.rm = TRUE))
+paste('Varianza: ', sd(DatosEstadoNutricional$IMC, na.rm = TRUE)^2)
+paste('Coeficiente de Variación: ', sd(DatosEstadoNutricional$IMC, na.rm = TRUE) / mean(DatosEstadoNutricional$IMC, na.rm = T) * 100)
+```
+
+
+#### **Asimetría y Curtosis: **
+```{r Descriptive of IMC 3}
+library(e1071)
+paste('Coeficiente de Asimetría: ', skewness(DatosEstadoNutricional$IMC, na.rm = TRUE))
+paste('Coeficiente de Curtosis: ', kurtosis(DatosEstadoNutricional$IMC, na.rm = TRUE))
+```
+
+
+
+### **7. Circunferencia de la Cintura: **
+
+#### **Medidas de Tendencia Central y Medidas de Posición: **
+```{r Descriptive of circun_cintura 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$circun_cintura, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$circun_cintura, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$circun_cintura, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$circun_cintura, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$circun_cintura, main= "Histograma de la variable Circunferencia de la Cintura")
+abline(v=mean(DatosEstadoNutricional$circun_cintura, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$circun_cintura, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$circun_cintura, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$circun_cintura, main= "Boxplot de la variable Circunferencia de la Cintura")
+```
+
+
+#### **Medidas de Dispersión: **
+```{r Descriptive of circun_cintura 2}
+paste('Desviación Estándar: ', sd(DatosEstadoNutricional$circun_cintura, na.rm = TRUE))
+paste('Varianza: ', sd(DatosEstadoNutricional$circun_cintura, na.rm = TRUE)^2)
+paste('Coeficiente de Variación: ', sd(DatosEstadoNutricional$circun_cintura, na.rm = TRUE) / mean(DatosEstadoNutricional$circun_cintura, na.rm = T) * 100)
+```
+
+
+#### **Asimetría y Curtosis: **
+```{r Descriptive of circun_cintura 3}
+library(e1071)
+paste('Coeficiente de Asimetría: ', skewness(DatosEstadoNutricional$circun_cintura, na.rm = TRUE))
+paste('Coeficiente de Curtosis: ', kurtosis(DatosEstadoNutricional$circun_cintura, na.rm = TRUE))
+```
+
+
+
+### **8. Cadera: **
+
+#### **Medidas de Tendencia Central y Medidas de Posición: **
+```{r Descriptive of cadera 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$cadera, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$cadera, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$cadera, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$cadera, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$cadera, main= "Histograma de la variable Cadera")
+abline(v=mean(DatosEstadoNutricional$cadera, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$cadera, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$cadera, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$cadera, main= "Boxplot de la variable Cadera")
+```
+
+
+#### **Medidas de Dispersión: **
+```{r Descriptive of cadera 2}
+paste('Desviación Estándar: ', sd(DatosEstadoNutricional$cadera, na.rm = TRUE))
+paste('Varianza: ', sd(DatosEstadoNutricional$cadera, na.rm = TRUE)^2)
+paste('Coeficiente de Variación: ', sd(DatosEstadoNutricional$cadera, na.rm = TRUE) / mean(DatosEstadoNutricional$cadera, na.rm = T) * 100)
+```
+
+
+#### **Asimetría y Curtosis: **
+```{r Descriptive of cadera 3}
+library(e1071)
+paste('Coeficiente de Asimetría: ', skewness(DatosEstadoNutricional$cadera, na.rm = TRUE))
+paste('Coeficiente de Curtosis: ', kurtosis(DatosEstadoNutricional$cadera, na.rm = TRUE))
+```
+
+
+
+### **9. Índice Cintura-Cadera: **
+
+#### **Medidas de Tendencia Central y Medidas de Posición: **
+```{r Descriptive of ind_cintura_cadera 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$ind_cintura_cadera, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$ind_cintura_cadera, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$ind_cintura_cadera, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$ind_cintura_cadera, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$ind_cintura_cadera, main= "Histograma de la variable Índice Cintura-Cadera")
+abline(v=mean(DatosEstadoNutricional$ind_cintura_cadera, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$ind_cintura_cadera, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$ind_cintura_cadera, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$ind_cintura_cadera, main= "Boxplot de la variable Índice Cintura-Cadera")
+```
+
+
+#### **Medidas de Dispersión: **
+```{r Descriptive of ind_cintura_cadera 2}
+paste('Desviación Estándar: ', sd(DatosEstadoNutricional$ind_cintura_cadera, na.rm = TRUE))
+paste('Varianza: ', sd(DatosEstadoNutricional$ind_cintura_cadera, na.rm = TRUE)^2)
+paste('Coeficiente de Variación: ', sd(DatosEstadoNutricional$ind_cintura_cadera, na.rm = TRUE) / mean(DatosEstadoNutricional$ind_cintura_cadera, na.rm = T) * 100)
+```
+
+
+
+#### **Asimetría y Curtosis: **
+```{r Descriptive of ind_cintura_cadera 3}
+library(e1071)
+paste('Coeficiente de Asimetría: ', skewness(DatosEstadoNutricional$ind_cintura_cadera, na.rm = TRUE))
+paste('Coeficiente de Curtosis: ', kurtosis(DatosEstadoNutricional$ind_cintura_cadera, na.rm = TRUE))
+```
+
+
+
+### **10. Índice Cintura-Estatura: **
+
+#### **Medidas de Tendencia Central y Medidas de Posición: **
+```{r Descriptive of ind_cintura_estatura 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$ind_cintura_estatura, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$ind_cintura_estatura, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$ind_cintura_estatura, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$ind_cintura_estatura, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$ind_cintura_estatura, main= "Histograma de la variable Índice Cintura-Estatura")
+abline(v=mean(DatosEstadoNutricional$ind_cintura_estatura, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$ind_cintura_estatura, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$ind_cintura_estatura, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$ind_cintura_estatura, main= "Boxplot de la variable Índice Cintura-Estatura")
+```
+
+
+#### **Medidas de Dispersión: **
+```{r Descriptive of ind_cintura_estatura 2}
+paste('Desviación Estándar: ', sd(DatosEstadoNutricional$ind_cintura_estatura, na.rm = TRUE))
+paste('Varianza: ', sd(DatosEstadoNutricional$ind_cintura_estatura, na.rm = TRUE)^2)
+paste('Coeficiente de Variación: ', sd(DatosEstadoNutricional$ind_cintura_estatura, na.rm = TRUE) / mean(DatosEstadoNutricional$ind_cintura_estatura, na.rm = T) * 100)
+```
+
+
+#### **Asimetría y Curtosis: **
+```{r Descriptive of ind_cintura_estatura 3}
+library(e1071)
+paste('Coeficiente de Asimetría: ', skewness(DatosEstadoNutricional$ind_cintura_estatura, na.rm = TRUE))
+paste('Coeficiente de Curtosis: ', kurtosis(DatosEstadoNutricional$ind_cintura_estatura, na.rm = TRUE))
+```
+
+
+
+### **11. Porcentaje de Grasa Corporal: **
+
+#### **Medidas de Tendencia Central y Medidas de Posición: **
+```{r Descriptive of por_grasa_corporal 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$por_grasa_corporal, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$por_grasa_corporal, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$por_grasa_corporal, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$por_grasa_corporal, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$por_grasa_corporal, main= "Histograma de la variable Cadera")
+abline(v=mean(DatosEstadoNutricional$por_grasa_corporal, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$por_grasa_corporal, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$por_grasa_corporal, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$por_grasa_corporal, main= "Boxplot de la variable Cadera")
+```
+
+
+#### **Medidas de Dispersión: **
+```{r Descriptive of por_grasa_corporal 2}
+paste('Desviación Estándar: ', sd(DatosEstadoNutricional$por_grasa_corporal, na.rm = TRUE))
+paste('Varianza: ', sd(DatosEstadoNutricional$por_grasa_corporal, na.rm = TRUE)^2)
+paste('Coeficiente de Variación: ', sd(DatosEstadoNutricional$por_grasa_corporal, na.rm = TRUE) / mean(DatosEstadoNutricional$por_grasa_corporal, na.rm = T) * 100)
+```
+
+
+#### **Asimetría y Curtosis: **
+```{r Descriptive of por_grasa_corporal 3}
+library(e1071)
+paste('Coeficiente de Asimetría: ', skewness(DatosEstadoNutricional$por_grasa_corporal, na.rm = TRUE))
+paste('Coeficiente de Curtosis: ', kurtosis(DatosEstadoNutricional$por_grasa_corporal, na.rm = TRUE))
+```
+
+
+
+### **12. Porcentaje de Masa Corporal Magra (Kg): **
+
+#### **Medidas de Tendencia Central y Medidas de Posición: **
+```{r Descriptive of masa_corporal_magra_kg 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$masa_corporal_magra_kg, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$masa_corporal_magra_kg, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$masa_corporal_magra_kg, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$masa_corporal_magra_kg, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$masa_corporal_magra_kg, main= "Histograma de la variable Masa Corporal Magra (Kg)")
+abline(v=mean(DatosEstadoNutricional$masa_corporal_magra_kg, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$masa_corporal_magra_kg, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$masa_corporal_magra_kg, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$masa_corporal_magra_kg, main= "Boxplot de la variable Masa Corporal Magra (Kg)")
+```
+
+
+#### **Medidas de Dispersión: **
+```{r Descriptive of masa_corporal_magra_kg 2}
+paste('Desviación Estándar: ', sd(DatosEstadoNutricional$masa_corporal_magra_kg, na.rm = TRUE))
+paste('Varianza: ', sd(DatosEstadoNutricional$masa_corporal_magra_kg, na.rm = TRUE)^2)
+paste('Coeficiente de Variación: ', sd(DatosEstadoNutricional$masa_corporal_magra_kg, na.rm = TRUE) / mean(DatosEstadoNutricional$masa_corporal_magra_kg, na.rm = T) * 100)
+```
+
+
+#### **Asimetría y Curtosis: **
+```{r Descriptive of masa_corporal_magra_kg 3}
+library(e1071)
+paste('Coeficiente de Asimetría: ', skewness(DatosEstadoNutricional$masa_corporal_magra_kg, na.rm = TRUE))
+paste('Coeficiente de Curtosis: ', kurtosis(DatosEstadoNutricional$masa_corporal_magra_kg, na.rm = TRUE))
+```
+
+
+
+### **13. Pliegue Cutáneo BICEPS: **
+
+#### **Medidas de Tendencia Central y Medidas de Posición: **
+```{r Descriptive of pliegue_cutaneo_BICEPS 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, main= "Histograma de la variable Pliegue Cutáneo BICEPS")
+abline(v=mean(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, main= "Boxplot de la variable Pliegue Cutáneo BICEPS")
+```
+
+Nos presentamos ante un problema, el gráfico Boxplot nos muestra que hay una persona con Pliegue Cutáneo BICEPS de 90mm, un dato muyu exhorbitante y que afectaría a un modelo de regresión lineal u otros modelos. Para no perder el registro vamos a imputarlo por la media y volvemos a realizar los cálculos.
+
+```{r Imputar Pliegue cutaneo BICEPS Anómalo}
+max(DatosEstadoNutricional$pliegue_cutaneo_BICEPS) # Verficiando que el valor anómalo es 90
+DatosEstadoNutricional$pliegue_cutaneo_BICEPS[DatosEstadoNutricional$pliegue_cutaneo_BICEPS == 90] <- mean(DatosEstadoNutricional$pliegue_cutaneo_BICEPS)
+```
+
+
+```{r Descriptive of pliegue_cutaneo_BICEPS 1-b}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, main= "Histograma de la variable Pliegue Cutáneo BICEPS")
+abline(v=mean(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, main= "Boxplot de la variable Pliegue Cutáneo BICEPS")
+```
+
+
+#### **Medidas de Dispersión: **
+```{r Descriptive of pliegue_cutaneo_BICEPS 2}
+paste('Desviación Estándar: ', sd(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, na.rm = TRUE))
+paste('Varianza: ', sd(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, na.rm = TRUE)^2)
+paste('Coeficiente de Variación: ', sd(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, na.rm = TRUE) / mean(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, na.rm = T) * 100)
+```
+
+
+#### **Asimetría y Curtosis: **
+```{r Descriptive of pliegue_cutaneo_BICEPS 3}
+library(e1071)
+paste('Coeficiente de Asimetría: ', skewness(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, na.rm = TRUE))
+paste('Coeficiente de Curtosis: ', kurtosis(DatosEstadoNutricional$pliegue_cutaneo_BICEPS, na.rm = TRUE))
+```
+
+
+
+### **14. Pliegue Cutáneo TRICEPS: **
+
+#### **Medidas de Tendencia Central y Medidas de Posición: **
+```{r Descriptive of pliegue_cutaneo_TRICEPS 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS, main= "Histograma de la variable Pliegue Cutáneo TRICEPS")
+abline(v=mean(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS, main= "Boxplot de la variable Pliegue Cutáneo TRICEPS")
+```
+
+
+#### **Medidas de Dispersión: **
+```{r Descriptive of pliegue_cutaneo_TRICEPS 2}
+paste('Desviación Estándar: ', sd(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS, na.rm = TRUE))
+paste('Varianza: ', sd(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS, na.rm = TRUE)^2)
+paste('Coeficiente de Variación: ', sd(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS, na.rm = TRUE) / mean(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS, na.rm = T) * 100)
+```
+
+
+#### **Asimetría y Curtosis: **
+```{r Descriptive of pliegue_cutaneo_TRICEPS 3}
+library(e1071)
+paste('Coeficiente de Asimetría: ', skewness(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS, na.rm = TRUE))
+paste('Coeficiente de Curtosis: ', kurtosis(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS, na.rm = TRUE))
+```
+
+
+
+### **15. Pliegue Cutáneo ESCAPULAR: **
+
+#### **Medidas de Tendencia Central y Medidas de Posición: **
+```{r Descriptive of pliegue_cutaneo_ESCAPULAR 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR, main= "Histograma de la variable Cadera")
+abline(v=mean(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR, main= "Boxplot de la variable Cadera")
+```
+
+
+#### **Medidas de Dispersión: **
+```{r Descriptive of pliegue_cutaneo_ESCAPULAR 2}
+paste('Desviación Estándar: ', sd(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR, na.rm = TRUE))
+paste('Varianza: ', sd(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR, na.rm = TRUE)^2)
+paste('Coeficiente de Variación: ', sd(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR, na.rm = TRUE) / mean(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR, na.rm = T) * 100)
+```
+
+
+#### **Asimetría y Curtosis: **
+```{r Descriptive of pliegue_cutaneo_ESCAPULAR 3}
+library(e1071)
+paste('Coeficiente de Asimetría: ', skewness(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR, na.rm = TRUE))
+paste('Coeficiente de Curtosis: ', kurtosis(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR, na.rm = TRUE))
+```
+
+
+
+### **16. Pliegue Cutáneo SUPRAILIACO: **
+
+#### **Medidas de Tendencia Central y Medidas de Posición: **
+```{r Descriptive of pliegue_cutaneo_SUPRAILIACO 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Media = ', mean(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO, na.rm = T))
+paste('Mediana = ', median(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO, na.rm = T))
+paste('Moda = ', mlv(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO, method = "mfv", na.rm = T))
+
+paste('Percentiles:')
+quantile(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO, c(0.01, 0.05, 0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 0.95, 0.99), na.rm = T)
+
+paste('Histograma:')
+hist(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO, main= "Histograma de la variable Pliegue Cutáneo SUPRAILIACO")
+abline(v=mean(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO, na.rm = T), col="red")
+abline(v=median(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO, na.rm = T), col="blue")
+abline(v=mlv(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO, method = "mfv", na.rm = T), col="green")
+
+paste('Boxplot:')
+boxplot(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO, main= "Boxplot de la variable Pliegue Cutáneo SUPRAILIACO")
+```
+
+
+#### **Medidas de Dispersión: **
+```{r Descriptive of pliegue_cutaneo_SUPRAILIACO 2}
+paste('Desviación Estándar: ', sd(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO, na.rm = TRUE))
+paste('Varianza: ', sd(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO, na.rm = TRUE)^2)
+paste('Coeficiente de Variación: ', sd(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO, na.rm = TRUE) / mean(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO, na.rm = T) * 100)
+```
+
+
+#### **Asimetría y Curtosis: **
+```{r Descriptive of pliegue_cutaneo_SUPRAILIACO 3}
+library(e1071)
+paste('Coeficiente de Asimetría: ', skewness(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO, na.rm = TRUE))
+paste('Coeficiente de Curtosis: ', kurtosis(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO, na.rm = TRUE))
+```
+
+
+
+### **17. Clasificación de Diagnóstico Talla-Edad: **
+
+#### **Frecuencia Absoluta y Frecuencia Relativa**
+```{r Descriptive of clasif_diagnos_talla_edad 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest') # Utilizamos la librería modeest
+paste('Moda = ', mlv(DatosEstadoNutricional$clasif_diagnos_talla_edad, method = "mfv", na.rm = T))
+
+table(DatosEstadoNutricional$clasif_diagnos_talla_edad)
+round(table(DatosEstadoNutricional$clasif_diagnos_talla_edad) / nrow(DatosEstadoNutricional) * 100, 2)
+
+a <- barplot(table(DatosEstadoNutricional$clasif_diagnos_talla_edad), main = 'Frecuencia Abosoluta de la variable Clasificación de Diagnóstico Talla-Edad', col = rainbow(6))
+text(a, table(DatosEstadoNutricional$clasif_diagnos_talla_edad) - 0.5, labels = table(DatosEstadoNutricional$clasif_diagnos_talla_edad))
+
+b <- barplot(prop.table(table(DatosEstadoNutricional$clasif_diagnos_talla_edad)), main = 'Frecuencia Relativa de la variable Clasificación de Diagnóstico Talla-Edad', col = rainbow(6))
+text(b, prop.table(table(DatosEstadoNutricional$clasif_diagnos_talla_edad)) - 0.02, labels = round(prop.table(table(DatosEstadoNutricional$clasif_diagnos_talla_edad)), 4)*100)
+
+```
+De acuerdo a la distribución, podríamos unir "Talla Baja" y "Talla Baja Severa" en una sola variable llamada "Talla Baja", dado que la talla baja severa solo tiene 1 caso. Otra alternativa podría ser eliminar el registro, observando lo demás datos que tienen, evaluando si es un registro atípico y no nos ayude a inferir una solución.
+
+
+```{r Reclasificación de clasif_diagnos_talla_edad}
+
+DatosEstadoNutricional$clasif_diagnos_talla_edad <- as.character(DatosEstadoNutricional$clasif_diagnos_talla_edad)
+DatosEstadoNutricional$clasif_diagnos_talla_edad[DatosEstadoNutricional$clasif_diagnos_talla_edad == 'TALLA BAJA SEVERA'] <- 'TALLA BAJA'
+DatosEstadoNutricional$clasif_diagnos_talla_edad <- as.factor(DatosEstadoNutricional$clasif_diagnos_talla_edad)
+```
+
+
+Verificamos que hemos hecho bien el cambio
+```{r Descriptive of clasif_diagnos_talla_edad 1b}
+# if (require("modeest")) install.packages("modeest")
+library('modeest') # Utilizamos la librería modeest
+paste('Moda = ', mlv(DatosEstadoNutricional$clasif_diagnos_talla_edad, method = "mfv", na.rm = T))
+
+table(DatosEstadoNutricional$clasif_diagnos_talla_edad)
+round(table(DatosEstadoNutricional$clasif_diagnos_talla_edad) / nrow(DatosEstadoNutricional) * 100, 2)
+
+a <- barplot(table(DatosEstadoNutricional$clasif_diagnos_talla_edad), main = 'Frecuencia Abosoluta de la variable Clasificación de Diagnóstico Talla-Edad', col = rainbow(6))
+text(a, table(DatosEstadoNutricional$clasif_diagnos_talla_edad) - 10, labels = table(DatosEstadoNutricional$clasif_diagnos_talla_edad))
+
+b <- barplot(prop.table(table(DatosEstadoNutricional$clasif_diagnos_talla_edad)), main = 'Frecuencia Relativa de la variable Clasificación de Diagnóstico Talla-Edad', col = rainbow(6))
+text(b, prop.table(table(DatosEstadoNutricional$clasif_diagnos_talla_edad)) - 0.02, labels = round(prop.table(table(DatosEstadoNutricional$clasif_diagnos_talla_edad)), 4)*100)
+
+```
+
+
+
+### **18. Clasificación de Diagnóstico IMC: **
+
+#### **Frecuencia Absoluta y Frecuencia Relativa**
+```{r Descriptive of clasif_diagnos_IMC 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest') # Utilizamos la librería modeest
+paste('Moda = ', mlv(DatosEstadoNutricional$clasif_diagnos_IMC, method = "mfv", na.rm = T))
+
+table(DatosEstadoNutricional$clasif_diagnos_IMC)
+round(table(DatosEstadoNutricional$clasif_diagnos_IMC) / nrow(DatosEstadoNutricional) * 100, 2)
+
+a <- barplot(table(DatosEstadoNutricional$clasif_diagnos_IMC), main = 'Frecuencia Abosoluta de la variable Clasificación de Diagnóstico IMC', col = rainbow(6))
+text(a, table(DatosEstadoNutricional$clasif_diagnos_IMC) - 5, labels = table(DatosEstadoNutricional$clasif_diagnos_IMC))
+
+b <- barplot(prop.table(table(DatosEstadoNutricional$clasif_diagnos_IMC)), main = 'Frecuencia Relativa de la variable Clasificación de Diagnóstico IMC', col = rainbow(6))
+text(b, prop.table(table(DatosEstadoNutricional$clasif_diagnos_IMC)) - 0.02, labels = round(prop.table(table(DatosEstadoNutricional$clasif_diagnos_IMC)), 4)*100)
+
+```
+De acuerdo a la distribución, podríamos unir "Delgadez" y "Riesgo de Bajo Peso" en una sola variable llamada "Riesgo de Bajo Peso", dado que delgadez solo tiene 1 caso. Otra alternativa podría ser eliminar el registro, observando lo demás datos que tienen, evaluando si es un registro atípico y no nos ayude a inferir una solución. Adicionalmente, más adelante convendría dicotomizar esta variable para el modelo de regresión logística.
+
+
+```{r Reclasificación de clasif_diagnos_IMC}
+DatosEstadoNutricional$clasif_diagnos_IMC <- as.character(DatosEstadoNutricional$clasif_diagnos_IMC)
+DatosEstadoNutricional$clasif_diagnos_IMC[DatosEstadoNutricional$clasif_diagnos_IMC == 'DELGADEZ'] <- 'RIESGO DE BAJO PESO'
+DatosEstadoNutricional$clasif_diagnos_IMC <- as.factor(DatosEstadoNutricional$clasif_diagnos_IMC)
+```
+
+
+Verificamos que hemos hecho bien el cambio
+```{r Descriptive of clasif_diagnos_IMC 1-b}
+# if (require("modeest")) install.packages("modeest")
+library('modeest') # Utilizamos la librería modeest
+paste('Moda = ', mlv(DatosEstadoNutricional$clasif_diagnos_IMC, method = "mfv", na.rm = T))
+
+table(DatosEstadoNutricional$clasif_diagnos_IMC)
+round(table(DatosEstadoNutricional$clasif_diagnos_IMC) / nrow(DatosEstadoNutricional) * 100, 2)
+
+a <- barplot(table(DatosEstadoNutricional$clasif_diagnos_IMC), main = 'Frecuencia Abosoluta de la variable Clasificación de Diagnóstico IMC', col = rainbow(6))
+text(a, table(DatosEstadoNutricional$clasif_diagnos_IMC) - 10, labels = table(DatosEstadoNutricional$clasif_diagnos_IMC))
+
+b <- barplot(prop.table(table(DatosEstadoNutricional$clasif_diagnos_IMC)), main = 'Frecuencia Relativa de la variable Clasificación de Diagnóstico IMC', col = rainbow(6))
+text(b, prop.table(table(DatosEstadoNutricional$clasif_diagnos_IMC)) - 0.02, labels = round(prop.table(table(DatosEstadoNutricional$clasif_diagnos_IMC)), 4)*100)
+
+```
+
+
+
+### **19. Clasificación de Perímetro Abdominal: **
+
+#### **Frecuencia Absoluta y Frecuencia Relativa**
+```{r Descriptive of clasif_perimetro_abdominal  1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest') # Utilizamos la librería modeest
+paste('Moda = ', mlv(DatosEstadoNutricional$clasif_perimetro_abdominal , method = "mfv", na.rm = T))
+
+table(DatosEstadoNutricional$clasif_perimetro_abdominal )
+round(table(DatosEstadoNutricional$clasif_perimetro_abdominal ) / nrow(DatosEstadoNutricional) * 100, 2)
+
+a <- barplot(table(DatosEstadoNutricional$clasif_perimetro_abdominal ), main = 'Frecuencia Abosoluta de la variable Clasificación de Perímetro Abdominal', col = rainbow(6))
+text(a, table(DatosEstadoNutricional$clasif_perimetro_abdominal ) - 20, labels = table(DatosEstadoNutricional$clasif_perimetro_abdominal ))
+
+b <- barplot(prop.table(table(DatosEstadoNutricional$clasif_perimetro_abdominal )), main = 'Frecuencia Relativa de la variable Clasificación de Perímetro Abdominal', col = rainbow(6))
+text(b, prop.table(table(DatosEstadoNutricional$clasif_perimetro_abdominal )) - 0.1, labels = round(prop.table(table(DatosEstadoNutricional$clasif_perimetro_abdominal )), 4)*100)
+
+```
+Esta variable "Clasificación de Perímetro Abdominal" se encuentra Ok.
+
+
+
+### **19. Clasificación de Anemia: **
+
+#### **Frecuencia Absoluta y Frecuencia Relativa**
+```{r Descriptive of clasif_anemia  1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest') # Utilizamos la librería modeest
+paste('Moda = ', mlv(DatosEstadoNutricional$clasif_anemia , method = "mfv", na.rm = T))
+
+table(DatosEstadoNutricional$clasif_anemia )
+round(table(DatosEstadoNutricional$clasif_anemia ) / nrow(DatosEstadoNutricional) * 100, 2)
+
+a <- barplot(table(DatosEstadoNutricional$clasif_anemia ), main = 'Frecuencia Abosoluta de la variable Clasificación de Perímetro Abdominal', col = rainbow(6))
+text(a, table(DatosEstadoNutricional$clasif_anemia ) - 20, labels = table(DatosEstadoNutricional$clasif_anemia ))
+
+b <- barplot(prop.table(table(DatosEstadoNutricional$clasif_anemia )), main = 'Frecuencia Relativa de la variable Clasificación de Perímetro Abdominal', col = rainbow(6))
+text(b, prop.table(table(DatosEstadoNutricional$clasif_anemia )) - 0.05, labels = round(prop.table(table(DatosEstadoNutricional$clasif_anemia )), 4)*100)
+
+```
+En esta variable podríamos agrupar los niveles "Anemia Leve" y "Anemia Moderada" como "PRESENTA ANEMIA" y "Valores incorrectos" como "NO PRESENTA ANEMIA" que es la Moda.
+
+
+```{r Reclasificación de clasif_anemia}
+
+DatosEstadoNutricional$clasif_anemia <- as.character(DatosEstadoNutricional$clasif_anemia)
+
+DatosEstadoNutricional$clasif_anemia[DatosEstadoNutricional$clasif_anemia %in% c('ANEMIA MODERADA', 'ANEMIA LEVE')] <- 'PRESENTA ANEMIA'
+DatosEstadoNutricional$clasif_anemia[DatosEstadoNutricional$clasif_anemia %in% c('VALORES INCORRECTOS')] <- 'NO PRESENTA ANEMIA'
+
+DatosEstadoNutricional$clasif_anemia <- as.factor(DatosEstadoNutricional$clasif_anemia)
+```
+
+
+Verificamos que hemos hecho bien el cambio
+```{r Descriptive of clasif_anemia  1-b}
+# if (require("modeest")) install.packages("modeest")
+library('modeest') # Utilizamos la librería modeest
+paste('Moda = ', mlv(DatosEstadoNutricional$clasif_anemia , method = "mfv", na.rm = T))
+
+table(DatosEstadoNutricional$clasif_anemia )
+round(table(DatosEstadoNutricional$clasif_anemia ) / nrow(DatosEstadoNutricional) * 100, 2)
+
+a <- barplot(table(DatosEstadoNutricional$clasif_anemia ), main = 'Frecuencia Abosoluta de la variable Clasificación de Perímetro Abdominal', col = rainbow(6))
+text(a, table(DatosEstadoNutricional$clasif_anemia ) - 20, labels = table(DatosEstadoNutricional$clasif_anemia ))
+
+b <- barplot(prop.table(table(DatosEstadoNutricional$clasif_anemia )), main = 'Frecuencia Relativa de la variable Clasificación de Perímetro Abdominal', col = rainbow(6))
+text(b, prop.table(table(DatosEstadoNutricional$clasif_anemia )) - 0.05, labels = round(prop.table(table(DatosEstadoNutricional$clasif_anemia )), 4)*100)
+
+```
+
+
+
+### **20. ANÁLISIS DE NUESTRA VARIABLE TARGET: **
+
+#### **Frecuencia Absoluta y Frecuencia Relativa**
+```{r Descriptive of target 1}
+# if (require("modeest")) install.packages("modeest")
+library('modeest')
+paste('Moda = ', mlv(DatosEstadoNutricional$target, method = "mfv", na.rm = T))
+
+table(DatosEstadoNutricional$target)
+round(table(DatosEstadoNutricional$target) / nrow(DatosEstadoNutricional) * 100, 2)
+
+a <- barplot(table(DatosEstadoNutricional$target), main = 'Frecuencia Abosoluta de Tenencia de Diabetes', col = rainbow(6))
+text(a, table(DatosEstadoNutricional$target) - 30, labels = table(DatosEstadoNutricional$target))
+
+b <- barplot(prop.table(table(DatosEstadoNutricional$target)), main = 'Frecuencia Relativa de Tenencia de Diabetes', col = rainbow(6))
+text(b, prop.table(table(DatosEstadoNutricional$target)) - 0.05, labels = round(prop.table(table(DatosEstadoNutricional$target)), 4)*100)
+
+```
+
+
+#### **Versus Variables Continuas**
+
+###### **Target vs Talla**
+```{r Descriptive of target vs talla}
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = talla, fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = talla, color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Talla", size = 15))
+final_plot
+```
+
+
+###### **Target vs Edad**
+```{r Descriptive of target vs edad}
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = edad, fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = edad, color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Edad", size = 15))
+final_plot
+```
+
+
+###### **Target vs Peso (Kg)**
+```{r Descriptive of target vs peso_kg}
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = peso_kg, fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = peso_kg, color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Peso (Kg)", size = 15))
+final_plot
+```
+
+
+###### **Target vs Circunferencia del Cuello**
+```{r Descriptive of target vs circun_cuello}
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = circun_cuello, fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = circun_cuello, color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Circunferencia del Cuello", size = 15))
+final_plot
+```
+
+
+###### **Target vs IMC**
+```{r Descriptive of target vs IMC}
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = IMC, fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = IMC, color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("IMC", size = 15))
+final_plot
+```
+
+
+###### **Target vs Circunferencia de la Cintura**
+```{r Descriptive of target vs circun_cintura}
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = circun_cintura, fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = circun_cintura, color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Circunferencia de la Cintura", size = 15))
+final_plot
+```
+
+
+###### **Target vs Cadera**
+```{r Descriptive of target vs cadera}
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = cadera, fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = cadera, color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Cadera", size = 15))
+final_plot
+```
+
+
+###### **Target vs Índice Cintura-Cadera**
+```{r Descriptive of target vs ind_cintura_cadera}
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = ind_cintura_cadera, fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = ind_cintura_cadera, color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Índice Cintura-Cadera", size = 15))
+final_plot
+```
+
+
+###### **Target vs Índice Cintura-Estatura**
+```{r Descriptive of target vs ind_cintura_estatura }
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = ind_cintura_estatura , fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = ind_cintura_estatura , color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Índice Cintura-Estatura", size = 15))
+final_plot
+```
+
+
+###### **Target vs Porcentaje de Grasa Corporal**
+```{r Descriptive of target vs por_grasa_corporal }
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = por_grasa_corporal , fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = por_grasa_corporal , color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Índice Porcentaje de Grasa Corporal", size = 15))
+final_plot
+```
+
+
+###### **Target vs Masa Corporal Magra (Kg)**
+```{r Descriptive of target vs masa_corporal_magra_kg }
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = masa_corporal_magra_kg , fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = masa_corporal_magra_kg , color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Masa Corporal Magra (Kg)", size = 15))
+final_plot
+```
+
+
+###### **Target vs Pliegue Cutáneo BICEPS**
+```{r Descriptive of target vs pliegue_cutaneo_BICEPS }
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = pliegue_cutaneo_BICEPS , fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = pliegue_cutaneo_BICEPS , color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Pliegue Cutáneo BICEPS", size = 15))
+final_plot
+```
+
+
+###### **Target vs Pliegue Cutáneo TRICEPS**
+```{r Descriptive of target vs pliegue_cutaneo_TRICEPS }
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = pliegue_cutaneo_TRICEPS , fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = pliegue_cutaneo_TRICEPS , color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Pliegue Cutáneo TRICEPS", size = 15))
+final_plot
+```
+
+
+###### **Target vs Pliegue Cutáneo ESCAPULAR**
+```{r Descriptive of target vs pliegue_cutaneo_ESCAPULAR }
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = pliegue_cutaneo_ESCAPULAR , fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = pliegue_cutaneo_ESCAPULAR , color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Pliegue Cutáneo ESCAPULAR", size = 15))
+final_plot
+```
+
+
+###### **Target vs Pliegue Cutáneo SUPRAILIACO**
+```{r Descriptive of target vs pliegue_cutaneo_SUPRAILIACO }
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = pliegue_cutaneo_SUPRAILIACO , fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = pliegue_cutaneo_SUPRAILIACO , color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Pliegue Cutáneo SUPRAILIACO", size = 15))
+final_plot
+```
+
+
+###### **Target vs PresentanNAs**
+```{r Descriptive of target vs PresentanNAs }
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+p1 <- ggplot(data = DatosEstadoNutricional, aes(x = PresentanNAs , fill = target)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = target), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = DatosEstadoNutricional, aes(x = target, y = PresentanNAs , color = target)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("PresentanNAs", size = 15))
+final_plot
+```
+
+
+
+#### **Versus Variables Categóricas**
+
+###### **Target vs Clasificación de Diagnóstico Talla-Edad**
+```{r Descriptive of target vs clasif_diagnos_talla_edad}
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+ggplot(data = DatosEstadoNutricional, aes(x = clasif_diagnos_talla_edad, y = ..count.., fill = target)) +
+  geom_bar() +
+  scale_fill_manual(values = c("gray50", "orangered2")) +
+  labs(title = "Clasificación de Diagnóstico Talla-Edad") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
+
+
+###### **Target vs Clasificación de Diagnóstico IMC**
+```{r Descriptive of target vs clasif_diagnos_IMC}
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+ggplot(data = DatosEstadoNutricional, aes(x = clasif_diagnos_IMC, y = ..count.., fill = target)) +
+  geom_bar() +
+  scale_fill_manual(values = c("gray50", "orangered2")) +
+  labs(title = "Clasificación de Diagnóstico IMC") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
+
+
+###### **Target vs Clasificación de Perímetro Abdominal**
+```{r Descriptive of target vs clasif_perimetro_abdominal}
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+ggplot(data = DatosEstadoNutricional, aes(x = clasif_perimetro_abdominal, y = ..count.., fill = target)) +
+  geom_bar() +
+  scale_fill_manual(values = c("gray50", "orangered2")) +
+  labs(title = "Clasificación de Perímetro Abdominal") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
+
+
+###### **Target vs Clasificación de Anemia**
+```{r Descriptive of target vs clasif_anemia}
+# if (require("ggplot2")) install.packages("ggplot2")
+# if (require("ggpubr")) install.packages("ggpubr")
+library(ggplot2)
+library(ggpubr)
+ggplot(data = DatosEstadoNutricional, aes(x = clasif_anemia, y = ..count.., fill = target)) +
+  geom_bar() +
+  scale_fill_manual(values = c("gray50", "orangered2")) +
+  labs(title = "Clasificación de Anemia") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
+
+
+
+Ahora podemos tener una visualización descriptiva de nuestros datos más coherente y listo para ser utilizada.
+
+```{r skim Data}
+library('skimr') # Utilizamos la librería skimr
+skim(DatosEstadoNutricional)
+```
+
+
+
+## Estadística Inferencial
+
+Como hemos podido observar de acuerdo a los gráficos y frecuencias anteriormente calculados, es muy difícil que tengamos variables con distribución normal. Muchas de las variables que hemos encontrado son sesgadas (Antigüedad Máxima, Saldo Pendiente, Saldo Pendiente Seguro) y otras están concentradas en sólo algunos niveles de variables cualitativas, lo que hace necesario unir algunos niveles y poder realizar algunas pruebas estadísticas que encuentren alguna asociación o relación con nuestra variable target.
+
+
+### **1. Pruebas de Normalidad**
+Ho: Los datos están normalmente distribuidos.
+Ha: Los datos no están normalmente distribuidos.
+
+#### **Comprobamos que todas las variables contínuas (talla,  edad, peso_kg, circun_cuello, IMC, circun_cintura, cadera, ind_cintura_cadera, ind_cintura_estatura, por_grasa_corporal, masa_corporal_magra_kg, pliegue_cutaneo_BICEPS, pliegue_cutaneo_TRICEPS, pliegue_cutaneo_ESCAPULAR, pliegue_cutaneo_SUPRAILIACO) no tienen distribución normal**
+```{r Normality Test}
+# Test: Kolmogorov-Smirnov "para la prueba de normalidad, n>50 casos"
+library(nortest) # Utilizamos la librería nortest
+lillie.test(DatosEstadoNutricional$talla)$p.value
+lillie.test(DatosEstadoNutricional$edad)$p.value
+lillie.test(DatosEstadoNutricional$peso_kg)$p.value
+lillie.test(DatosEstadoNutricional$circun_cuello)$p.value
+lillie.test(DatosEstadoNutricional$IMC)$p.value
+lillie.test(DatosEstadoNutricional$circun_cintura)$p.value
+lillie.test(DatosEstadoNutricional$cadera)$p.value
+lillie.test(DatosEstadoNutricional$ind_cintura_cadera)$p.value
+lillie.test(DatosEstadoNutricional$ind_cintura_estatura)$p.value
+lillie.test(DatosEstadoNutricional$por_grasa_corporal)$p.value
+lillie.test(DatosEstadoNutricional$masa_corporal_magra_kg)$p.value
+lillie.test(DatosEstadoNutricional$pliegue_cutaneo_BICEPS)$p.value
+lillie.test(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS)$p.value
+lillie.test(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR)$p.value
+lillie.test(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO)$p.value
+
+
+qqnorm(DatosEstadoNutricional$talla)
+qqline(DatosEstadoNutricional$talla)
+
+qqnorm(DatosEstadoNutricional$edad)
+qqline(DatosEstadoNutricional$edad)
+
+qqnorm(DatosEstadoNutricional$peso_kg)
+qqline(DatosEstadoNutricional$peso_kg)
+
+qqnorm(DatosEstadoNutricional$circun_cuello)
+qqline(DatosEstadoNutricional$circun_cuello)
+
+qqnorm(DatosEstadoNutricional$IMC)
+qqline(DatosEstadoNutricional$IMC)
+
+qqnorm(DatosEstadoNutricional$circun_cintura)
+qqline(DatosEstadoNutricional$circun_cintura)
+
+qqnorm(DatosEstadoNutricional$cadera)
+qqline(DatosEstadoNutricional$cadera)
+
+qqnorm(DatosEstadoNutricional$ind_cintura_cadera)
+qqline(DatosEstadoNutricional$ind_cintura_cadera)
+
+qqnorm(DatosEstadoNutricional$ind_cintura_estatura)
+qqline(DatosEstadoNutricional$ind_cintura_estatura)
+
+qqnorm(DatosEstadoNutricional$por_grasa_corporal)
+qqline(DatosEstadoNutricional$por_grasa_corporal)
+
+qqnorm(DatosEstadoNutricional$masa_corporal_magra_kg)
+qqline(DatosEstadoNutricional$masa_corporal_magra_kg)
+
+qqnorm(DatosEstadoNutricional$pliegue_cutaneo_BICEPS)
+qqline(DatosEstadoNutricional$pliegue_cutaneo_BICEPS)
+
+qqnorm(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS)
+qqline(DatosEstadoNutricional$pliegue_cutaneo_TRICEPS)
+
+qqnorm(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR)
+qqline(DatosEstadoNutricional$pliegue_cutaneo_ESCAPULAR)
+
+qqnorm(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO)
+qqline(DatosEstadoNutricional$pliegue_cutaneo_SUPRAILIACO)
+```
+**Talla**
+**Decisión:** Los datos de la variable no están normalmente distribuidos (p-value: 0.01191762); considerando un nivel de confianza del 95% o nivel de significancia del 5%. 
+
+**Edad**
+**Decisión:** Los datos de la variable no están normalmente distribuidos (p-value: 4.801988e-99); considerando un nivel de confianza del 95% o nivel de significancia del 5%. 
+
+**Peso (Kg)**
+**Decisión:** Los datos de la variable no están normalmente distribuidos (p-value: 7.606182e-10); considerando un nivel de confianza del 95% o nivel de significancia del 5%. 
+
+**Circunferencia del Cuello**
+**Decisión:** Los datos de la variable no están normalmente distribuidos (p-value: 2.856832e-05); considerando un nivel de confianza del 95% o nivel de significancia del 5%. 
+
+**Índice de Masa Corporal (IMC)**
+**Decisión:** Los datos de la variable no están normalmente distribuidos (p-value: 4.007345e-08); considerando un nivel de confianza del 95% o nivel de significancia del 5%. 
+
+**Circunferencia de la Cintura**
+**Decisión:** Los datos de la variable no están normalmente distribuidos (p-value: 1.416597e-10); considerando un nivel de confianza del 95% o nivel de significancia del 5%.
+
+**Cadera**
+**Decisión:** Los datos de la variable no están normalmente distribuidos (p-value: 2.575331e-07); considerando un nivel de confianza del 95% o nivel de significancia del 5%.
+
+**Índice Cintura-Cadera**
+**Decisión:** Los datos de la variable no están normalmente distribuidos (0.01284255); considerando un nivel de confianza del 95% o nivel de significancia del 5%.
+
+**Índice Cintura-Estatura**
+**Decisión:** Los datos de la variable no están normalmente distribuidos (p-value: 4.692824e-06); considerando un nivel de confianza del 95% o nivel de significancia del 5%.
+
+**Porcentaje de Grasa Corporal**
+**Decisión:** Los datos de la variable no están normalmente distribuidos (p-value: 3.902652e-33); considerando un nivel de confianza del 95% o nivel de significancia del 5%.
+
+**Masa Corporal Magra (Kg)**
+**Decisión:** Los datos de la variable no están normalmente distribuidos (p-value: 5.065412e-07); considerando un nivel de confianza del 95% o nivel de significancia del 5%.
+
+**Pliegue Cutáneo BICEPS**
+**Decisión:** Los datos de la variable no están normalmente distribuidos (p-value: 4.447548e-26); considerando un nivel de confianza del 95% o nivel de significancia del 5%.
+
+**Pliegue Cutáneo TRICEPS**
+**Decisión:** Los datos de la variable no están normalmente distribuidos (p-value: 6.417802e-07); considerando un nivel de confianza del 95% o nivel de significancia del 5%.
+
+**Pliegue Cutáneo ESCAPULAR**
+**Decisión:** Los datos de la variable no están normalmente distribuidos (p-value: 5.51812e-13); considerando un nivel de confianza del 95% o nivel de significancia del 5%.
+
+**Pliegue Cutáneo SUPRAILIACO**
+**Decisión:** Los datos de la variable no están normalmente distribuidos (p-value: 9.335454e-08); considerando un nivel de confianza del 95% o nivel de significancia del 5%.
+
+
+Al no tener todas las variables independientes continuas una distribución normal, debemos estar pensando en desarrollar un modelo tipo logístico y/o un análisis no supervisado previo (kmeans).
+
+
+
+
+### **2. Correlación No Paramétrica: Rho de Spearman**
+Ho: Las variables A y B son mutuamente independientes.
+Ha: Las variables A y B son mutuamente dependientes.
+
+#### **Comprobamos que de las variables contínuas: talla, peso_kg, circun_cuello e IMC, son mutuamente dependientes cada par**
+
+#### **Comprobaremos si existe algún grado de asociación entre las variables mencionadas: **
+```{r Rho Spearman}
+library(statsr) # Utilizamos la librería statsr
+
+cor.test(DatosEstadoNutricional$talla, DatosEstadoNutricional$peso_kg, method = 'spearman')
+
+cor.test(DatosEstadoNutricional$talla, DatosEstadoNutricional$circun_cuello, method = 'spearman')
+
+cor.test(DatosEstadoNutricional$talla, DatosEstadoNutricional$IMC, method = 'spearman')
+
+cor.test(DatosEstadoNutricional$peso_kg, DatosEstadoNutricional$circun_cuello, method = 'spearman')
+
+cor.test(DatosEstadoNutricional$peso_kg, DatosEstadoNutricional$IMC, method = 'spearman')
+
+cor.test(DatosEstadoNutricional$circun_cuello, DatosEstadoNutricional$IMC, method = 'spearman')
+
+```
+
+
+#### ** talla y peso_kg**
+**Decision:** Son mutuamente dependientes.  
+**Conclusión:** Con un nivel de confianza del 95%, se afirma que, existe una correlación positiva media de 0.4243606  = 0.42
+
+#### ** talla y circun_cuello**
+**Decision:** Son mutuamente dependientes.  
+**Conclusión:** Con un nivel de confianza del 95%, se afirma que, existe una correlación positiva muy baja de 0.1857865  = 0.19
+
+#### ** talla e IMC**
+**Decision:** Son mutuamente dependientes.  
+**Conclusión:** Con un nivel de confianza del 95%, se afirma que, existe una correlación negativa muy baja de -0.1789391  = -0.18
+
+#### ** peso_kg y circun_cuello**
+**Decision:** Son mutuamente dependientes.  
+**Conclusión:** Con un nivel de confianza del 95%, se afirma que, existe una correlación positiva alta de 0.766588  = 0.77
+** Deberíamos tener cuidado al momento de considerar estas dos variables en un modelo de regresión lineal, dado que podría presentarse problemas de MULTICOLINEALIDAD.**
+
+#### ** peso_kg y IMC**
+**Decision:** Son mutuamente dependientes.  
+**Conclusión:** Con un nivel de confianza del 95%, se afirma que, existe una correlación positiva alta de 0.7226666  = 0.72
+** Deberíamos tener cuidado al momento de considerar estas dos variables en un modelo de regresión lineal, dado que podría presentarse problemas de MULTICOLINEALIDAD.**
+
+#### ** circun_cuello y IMC**
+**Decision:** Son mutuamente dependientes.  
+**Conclusión:** Con un nivel de confianza del 95%, se afirma que, existe una correlación positiva alta de 0.7620652  = 0.76
+** Deberíamos tener cuidado al momento de considerar estas dos variables en un modelo de regresión lineal, dado que podría presentarse problemas de MULTICOLINEALIDAD.**
+
+
+
+
+
+### **3. Correlación No Paramétrica: Prueba Chi-cuadrada**
+Ho: Las variables A y B son mutuamente independientes.
+Ha: Las variables A y B son mutuamente dependientes.
+
+#### **Deseamos comprobar si existe relación entre la Clasificación de Diagnóstico IMC y la variable Target. Esto con el fin de poder determinar si estas variables están relacionads y considerar a Clasificación de Diagnóstico IMC como un posible predictor de la Diabetes (Target).**
+
+#### **Comprobaremos si existe algún grado de relación entre las variables Clasificación de Diagnóstico IMC y Target: **
+```{r}
+chisq.test(table(DatosEstadoNutricional$clasif_diagnos_IMC, DatosEstadoNutricional$target))
+
+```
+
+**Decision:** Las variables Clasificación de Diagnóstico IMC y el Target son mutuamente dependientes. Con un nivel de confianza del 95%, se afirma que ambas variables están relacionadas.
+
+Así también podemos probar otros conjuntos de variables
+
+```{r}
+chisq.test(table(DatosEstadoNutricional$sexo, DatosEstadoNutricional$target))
+chisq.test(table(DatosEstadoNutricional$clasif_diagnos_talla_edad, DatosEstadoNutricional$target))
+chisq.test(table(DatosEstadoNutricional$clasif_perimetro_abdominal, DatosEstadoNutricional$target))
+chisq.test(table(DatosEstadoNutricional$clasif_anemia, DatosEstadoNutricional$target))
+```
+
+
+
+#### ** sexo y target**
+**Decision:** Son mutuamente dependientes.  
+**Conclusión:** Con un nivel de confianza del 95%, se afirma que ambas variables están relacionadas (p-value = 0.02188).
+
+#### ** clasif_diagnos_talla_edad y target**
+**Decision:** Son mutuamente independientes.  
+**Conclusión:** Con un nivel de confianza del 95%, se afirma que ambas variables no están relacionadas (p-value = 0.2087).
+
+#### ** clasif_perimetro_abdominal e target**
+**Decision:** Son mutuamente dependientes.  
+**Conclusión:** Con un nivel de confianza del 95%, se afirma que ambas variables están relacionadas (p-value = 2.2e-16).
+
+#### ** clasif_anemia y target**
+**Decision:** Son mutuamente independientes.  
+**Conclusión:** Con un nivel de confianza del 95%, se afirma que ambas variables no están relacionadas (p-value = 0.6366).
+
+
+
+
+## **SEGMENTACIÓN**
+
+Vamos a hacer un análisis cluster, para ello necesitamos solo datos numéricos. Los datos categóricos los podemos utilizar para hacer una caracterización de los segmentos que encontremos.
+
+
+1.- Revisamos nuestra base de datos
+```{r}
+str(DatosEstadoNutricional)
+```
+Para el análisis cluster no necesitamos: "N.", "Individuo", "sexo", "clasif_diagnos_talla_edad", "clasif_diagnos_IMC", "clasif_perimetro_abdominal", "clasif_anemia", "PresentanNAs", ni target. La variable Target no la vamos utilizar dado que vamos a aplicar luego una regresión logística y la segmentación se considerará una nueva variable independiente.
+
+
+2.- Retirando variables que no necesitamos:
+```{r}
+DatosEstadoNutricional_Clusters <- DatosEstadoNutricional
+DatosEstadoNutricional_Clusters <- DatosEstadoNutricional_Clusters[,-c(1, 2, 3, 19, 20, 21, 22, 23, 24)] 
+
+str(DatosEstadoNutricional_Clusters)
+```
+
+
+
+3.- Viendo que las variables estan en diferentes escalas, debemos de normalizarlas:
+```{r}
+DatosEstadoNutricional_Clusters_Z <- scale(DatosEstadoNutricional_Clusters)
+View(DatosEstadoNutricional_Clusters_Z)
+```
+
+
+
+4. Ahora debemos de calcular las distancias
+
+Tambien se puede trabajar con los metodos: "maximum", "manhattan", "canberra", "binary", "minkowski", "pearson", "spearman" o "kendall"
+```{r}
+library(factoextra)  # Utilizamos la librería factoextra
+Distancias <- get_dist(DatosEstadoNutricional_Clusters_Z, method = "euclidean") 
+
+fviz_dist(Distancias, gradient = list(low = "blue", mid = "white", high = "red"))
+# Como son bastantes casos, el gráfico no se aprecia mucho; con pocos caso se ve mejor
+```
+
+
+También podríamos visualizar un gráfico de correlación:
+```{r}
+library(PerformanceAnalytics)
+chart.Correlation(DatosEstadoNutricional_Clusters_Z, histogram = F, pch = 19)
+
+```
+
+Lo que podemos apreciar es que muchas variables no están correlacionadas, lo que es importante para un análisis cluster. Sin embargo, algunas variables se encuentran altamente correlacionadas. Ya dependerá del experto decidir qué variable se excluyen o sino al obtener nuetros clusters evaluamos si estamos de acuerdo o no con la seperación de grupos y podríamos ensayar quitando y aumentando las variables correlacionadas.
+
+
+
+5. Nro de clusters.
+
+5.1. Vamos a estimar el numero de clusters idoneo: Utilizando el Método Elbow.
+```{r}
+fviz_nbclust(DatosEstadoNutricional_Clusters_Z, kmeans, method = "wss")
+```
+
+
+
+5.2. Vamos a estimar el numero de clusters idoneo: Utilizando el método silhouette
+```{r}
+fviz_nbclust(DatosEstadoNutricional_Clusters_Z, kmeans, method = "silhouette")
+```
+
+
+5.3. Vamos a estimar el numero de clusters idoneo: gap_stat
+```{r}
+fviz_nbclust(DatosEstadoNutricional_Clusters_Z, kmeans, method = "gap_stat")
+```
+
+
+
+5.4 Realizaremos una clasificacion Jerarquica para visualizar posible nro de clusters
+
+```{r}
+
+CJerarquico <- hcut(DatosEstadoNutricional_Clusters_Z, k = 5, stand = TRUE) #k = 2 a m?s
+fviz_dend(CJerarquico, rect = TRUE, cex = 0.5,
+          k_colors = c("red","#2E9FDF","green","black", "blue"))
+```
+
+De acuerdo a los diversos métodos tenemos los siguientes números óptimos de clusters:
+- Elbow: 3 ó 5 clusters
+- Silhouette: 3 clusters
+- gap_stat: 1 --> Debemos analizar bien por qué nos da sólo 1, al parece existen datos anómalos que están desorientando la selección óptima del número de clusters.
+- Jerárquico: Podemos ver que 5 grupos estarían bien, pero a la vez 3 grupos tampoco es malo.
+
+
+6. Vamos a calcular 5 clusters.
+
+```{r}
+kmeans5 <- kmeans(DatosEstadoNutricional_Clusters_Z, centers = 5, nstart = 25)
+kmeans5
+#head(DatosEstadoNutricional_Clusters_Z)
+```
+
+
+6.1. Podemos revisar la estructura k-means
+```{r}
+str(kmeans5)
+```
+
+
+6.2. Centroides de los clusters:
+```{r}
+kmeans5$centers
+```
+
+
+
+6.3 Tamaño de los clusters:
+```{r}
+kmeans5$size
+```
+
+7. Graficamos los clusters
+
+Podemos visualizarlo de diferentes maneras:
+
+
+7.1 Grafico de los clusters por polígonos
+```{r}
+fviz_cluster(list(data = DatosEstadoNutricional_Clusters_Z, cluster = kmeans5$cluster))
+```
+
+
+
+7.2 Grafico de los clusters con elipse (tipo euclídea)
+```{r}
+fviz_cluster(list(data = DatosEstadoNutricional_Clusters_Z, cluster = kmeans5$cluster), ellipse.type = "euclid",repel = TRUE,star.plot = TRUE)
+```
+
+
+7.3 Grafico de los clusters con elipse (tipo normalizado)
+```{r}
+fviz_cluster(list(data = DatosEstadoNutricional_Clusters_Z, cluster = kmeans5$cluster),ellipse.type = "norm")
+```
+
+Como podemos apreciar los gráficos nos ayudan a visualizar a los individuos agrupados, sin embargo con 5 grupos vemos que se superponen algunos clusters y podrían no definirse diferencias que sean significativas respecto a la pertenencia de un individuo al cluster. Otra observación, gracias al gráfico 7.2, podemos observar datos muy alejados que podrían distorsionar el análisis, probaremos retirando los casos 549, 341, 9, 20 y 596 y realizaremos el análisis clusters con k=3.
+
+
+
+### **Nuevamente desde los puntos 2 al 7:** Retirando los casos 549, 341, 9, 20 y 596
+
+2.- Retirando variables que no necesitamos:
+```{r}
+DatosEstadoNutricional_Clusters <- DatosEstadoNutricional
+#DatosEstadoNutricional_Clusters <- DatosEstadoNutricional_Clusters[-c(399, 549),-c(1, 2, 3, 19, 20, 21, 22, 23, 24)] 
+DatosEstadoNutricional_Clusters <- DatosEstadoNutricional_Clusters[-c(549, 341, 9, 20, 596),-c(1, 2, 3, 19, 20, 21, 22, 23, 24)] 
+
+str(DatosEstadoNutricional_Clusters)
+```
+
+
+
+3.- Viendo que las variables estan en diferentes escalas, debemos de normalizarlas:
+```{r}
+DatosEstadoNutricional_Clusters_Z <- scale(DatosEstadoNutricional_Clusters)
+#View(DatosEstadoNutricional_Clusters)
+```
+
+
+
+4. Ahora debemos de calcular las distancias
+
+Tambien se puede trabajar con los metodos: "maximum", "manhattan", "canberra", "binary", "minkowski", "pearson", "spearman" o "kendall"
+```{r}
+library(factoextra)  # Utilizamos la librería factoextra
+Distancias <- get_dist(DatosEstadoNutricional_Clusters_Z, method = "euclidean") 
+
+fviz_dist(Distancias, gradient = list(low = "blue", mid = "white", high = "red"))
+# Como son bastantes casos, el gráfico no se aprecia mucho; con pocos caso se ve mejor
+```
+
+
+También podríamos visualizar un gráfico de correlación:
+```{r}
+library(PerformanceAnalytics)
+chart.Correlation(DatosEstadoNutricional_Clusters_Z, histogram = F, pch = 19)
+
+```
+
+Lo que podemos apreciar es que muchas variables no están correlacionadas, lo que es importante para un análisis cluster. Sin embargo, algunas variables se encuentran altamente correlacionadas. Ya dependerá del experto decidir qué variable se excluyen o sino al obtener nuetros clusters evaluamos si estamos de acuerdo o no con la seperación de grupos y podríamos ensayar quitando y aumentando las variables correlacionadas.
+
+
+
+5. Nro de clusters.
+
+5.1. Vamos a estimar el numero de clusters idoneo: Utilizando el Método Elbow.
+```{r}
+fviz_nbclust(DatosEstadoNutricional_Clusters_Z, kmeans, method = "wss")
+```
+
+
+
+5.2. Vamos a estimar el numero de clusters idoneo: Utilizando el método silhouette
+```{r}
+fviz_nbclust(DatosEstadoNutricional_Clusters_Z, kmeans, method = "silhouette")
+```
+
+
+5.3. Vamos a estimar el numero de clusters idoneo: gap_stat
+```{r}
+fviz_nbclust(DatosEstadoNutricional_Clusters_Z, kmeans, method = "gap_stat")
+```
+
+
+
+5.4 Realizaremos una clasificacion Jerarquica para visualizar posible nro de clusters
+
+```{r}
+
+CJerarquico <- hcut(DatosEstadoNutricional_Clusters_Z, k = 3, stand = TRUE) #k = 2 a m?s
+fviz_dend(CJerarquico, rect = TRUE, cex = 0.5,
+          k_colors = c("red","#2E9FDF","green","black", "blue"))
+```
+
+De acuerdo a los diversos métodos tenemos los siguientes números óptimos de clusters:
+Elbow: 3 ó 5 clusters
+Silhouette: 3 clusters
+gap_stat: 5 --> Al parecer 5 es el número óptimo clusters, de igual modo vamos a considerarlo.
+Jerárquico: Podemos ver que 5 grupos estarían bien, pero a la vez 3 grupos tampoco es malo.
+
+
+6. Vamos a calcular 3 clusters.
+
+```{r}
+kmeans3 <- kmeans(DatosEstadoNutricional_Clusters_Z, centers = 3, nstart = 25)
+kmeans3
+head(DatosEstadoNutricional_Clusters_Z)
+```
+
+
+6.1. Podemos revisar la estructura k-means
+```{r}
+str(kmeans3)
+```
+
+
+6.2. Centroides de los clusters:
+```{r}
+kmeans3$centers
+```
+
+
+
+6.3 Tamaño de los clusters:
+```{r}
+kmeans3$size
+```
+
+7. Graficamos los clusters
+
+Podemos visualizarlo de diferentes maneras:
+
+
+7.1 Grafico de los clusters por polígonos
+```{r}
+fviz_cluster(list(data = DatosEstadoNutricional_Clusters_Z, cluster = kmeans3$cluster))
+```
+
+
+
+7.2 Grafico de los clusters con elipse (tipo euclídea)
+```{r}
+fviz_cluster(list(data = DatosEstadoNutricional_Clusters_Z, cluster = kmeans3$cluster), ellipse.type = "euclid",repel = TRUE,star.plot = TRUE)
+```
+
+
+7.3 Grafico de los clusters con elipse (tipo normalizado)
+```{r}
+fviz_cluster(list(data = DatosEstadoNutricional_Clusters_Z, cluster = kmeans3$cluster),ellipse.type = "norm")
+```
+
+Tanto 3 como 5 clusters estaría bien, 5 clusters si tengo la suficiente capacidad para atender a 5 grupos o evaluar o medir alguna característica en particular. 3 grupos también estaría bien, además no se traslapan como con 5 clusters. La decisión final podría depender de un experto. Vamos a considerar ambos para nuestro modelo de regresión logística.
+
+
+
+
+### **Nuevamente desde los puntos 2 al 7:** Considerando todos los casos y 3 clusters
+
+2.- Retirando variables que no necesitamos:
+```{r}
+DatosEstadoNutricional_Clusters <- DatosEstadoNutricional
+#DatosEstadoNutricional_Clusters <- DatosEstadoNutricional_Clusters[-c(399, 549),-c(1, 2, 3, 19, 20, 21, 22, 23, 24)] 
+DatosEstadoNutricional_Clusters <- DatosEstadoNutricional_Clusters[,-c(1, 2, 3, 19, 20, 21, 22, 23, 24)] 
+
+str(DatosEstadoNutricional_Clusters)
+```
+
+
+
+3.- Viendo que las variables estan en diferentes escalas, debemos de normalizarlas:
+```{r}
+DatosEstadoNutricional_Clusters_Z <- scale(DatosEstadoNutricional_Clusters)
+#View(DatosEstadoNutricional_Clusters)
+```
+
+
+
+4. Ahora debemos de calcular las distancias
+
+Tambien se puede trabajar con los metodos: "maximum", "manhattan", "canberra", "binary", "minkowski", "pearson", "spearman" o "kendall"
+```{r}
+library(factoextra)  # Utilizamos la librería factoextra
+Distancias <- get_dist(DatosEstadoNutricional_Clusters_Z, method = "euclidean") 
+
+fviz_dist(Distancias, gradient = list(low = "blue", mid = "white", high = "red"))
+# Como son bastantes casos, el gráfico no se aprecia mucho; con pocos caso se ve mejor
+```
+
+
+También podríamos visualizar un gráfico de correlación:
+```{r}
+library(PerformanceAnalytics)
+chart.Correlation(DatosEstadoNutricional_Clusters_Z, histogram = F, pch = 19)
+
+```
+
+Lo que podemos apreciar es que muchas variables no están correlacionadas, lo que es importante para un análisis cluster. Sin embargo, algunas variables se encuentran altamente correlacionadas. Ya dependerá del experto decidir qué variable se excluyen o sino al obtener nuetros clusters evaluamos si estamos de acuerdo o no con la seperación de grupos y podríamos ensayar quitando y aumentando las variables correlacionadas.
+
+
+
+5. Nro de clusters.
+
+5.1. Vamos a estimar el numero de clusters idoneo: Utilizando el Método Elbow.
+```{r}
+fviz_nbclust(DatosEstadoNutricional_Clusters_Z, kmeans, method = "wss")
+```
+
+
+
+5.2. Vamos a estimar el numero de clusters idoneo: Utilizando el método silhouette
+```{r}
+fviz_nbclust(DatosEstadoNutricional_Clusters_Z, kmeans, method = "silhouette")
+```
+
+
+5.3. Vamos a estimar el numero de clusters idoneo: gap_stat
+```{r}
+fviz_nbclust(DatosEstadoNutricional_Clusters_Z, kmeans, method = "gap_stat")
+```
+
+
+
+5.4 Realizaremos una clasificacion Jerarquica para visualizar posible nro de clusters
+
+```{r}
+
+CJerarquico <- hcut(DatosEstadoNutricional_Clusters_Z, k = 3, stand = TRUE) #k = 2 a m?s
+fviz_dend(CJerarquico, rect = TRUE, cex = 0.5,
+          k_colors = c("red","#2E9FDF","green","black", "blue"))
+```
+
+De acuerdo a los diversos métodos tenemos los siguientes números óptimos de clusters:
+Elbow: 3 ó 5 clusters
+Silhouette: 3 clusters
+gap_stat: 5 --> Al parecer 5 es el número óptimo clusters, de igual modo vamos a considerarlo.
+Jerárquico: Podemos ver que 5 grupos estarían bien, pero a la vez 3 grupos tampoco es malo.
+
+
+6. Vamos a calcular 3 clusters.
+
+```{r}
+kmeans3 <- kmeans(DatosEstadoNutricional_Clusters_Z, centers = 3, nstart = 25)
+kmeans3
+head(DatosEstadoNutricional_Clusters_Z)
+```
+
+
+6.1. Podemos revisar la estructura k-means
+```{r}
+str(kmeans3)
+```
+
+
+6.2. Centroides de los clusters:
+```{r}
+kmeans3$centers
+```
+
+
+
+6.3 Tamaño de los clusters:
+```{r}
+kmeans3$size
+```
+
+7. Graficamos los clusters
+
+Podemos visualizarlo de diferentes maneras:
+
+
+7.1 Grafico de los clusters por polígonos
+```{r}
+fviz_cluster(list(data = DatosEstadoNutricional_Clusters_Z, cluster = kmeans3$cluster))
+```
+
+
+
+7.2 Grafico de los clusters con elipse (tipo euclídea)
+```{r}
+fviz_cluster(list(data = DatosEstadoNutricional_Clusters_Z, cluster = kmeans3$cluster), ellipse.type = "euclid",repel = TRUE,star.plot = TRUE)
+```
+
+
+7.3 Grafico de los clusters con elipse (tipo normalizado)
+```{r}
+fviz_cluster(list(data = DatosEstadoNutricional_Clusters_Z, cluster = kmeans3$cluster),ellipse.type = "norm")
+```
+
+
+
+8.- Finalmente vamos a llevar nuestros clusters kmeans3 y kmeans5 a nuestra base de datos para realizar la regresión logística.
+
+Guardamos el cluster en la base de datos originales:
+```{r}
+cluster5 <- data.frame(kmeans5$cluster)
+cluster3 <- data.frame(kmeans3$cluster)
+DatosEstadoNutricional_Final <- DatosEstadoNutricional
+DatosEstadoNutricional_Final$cluster5 <- as.factor(cluster5$kmeans5.cluster)
+DatosEstadoNutricional_Final$cluster3 <- as.factor(cluster3$kmeans3.cluster)
+  
+head(DatosEstadoNutricional_Final)
+View(DatosEstadoNutricional_Final)
+```
+
+# Veamos las caracteristicas de los clusters:
+
+Con 5 Segmentos:
+```{r}
+library(dplyr)
+Segmentos5 <- DatosEstadoNutricional_Final[,-c(1, 2, 3, 19, 20, 21, 22, 23, 24, 25, 26)] %>%
+  mutate(cluster = DatosEstadoNutricional_Final$cluster5) %>%
+  group_by(cluster) %>%
+  summarise_all("mean")
+
+View(Segmentos5)
+```
+
+
+Con 3 Segmentos:
+```{r}
+library(dplyr)
+Segmentos3 <- DatosEstadoNutricional_Final[,-c(1, 2, 3, 19, 20, 21, 22, 23, 24, 25, 26)] %>%
+  mutate(cluster = DatosEstadoNutricional_Final$cluster3) %>%
+  group_by(cluster) %>%
+  summarise_all("mean")
+
+View(Segmentos3)
+```
+
+
+
+Guardamos las caracterizaciones:
+```{r}
+write.csv(Segmentos5, file = "Datos/Segmentos5.csv", row.names = FALSE)
+write.csv(Segmentos5, file = "Datos/Segmentos3.csv", row.names = FALSE)
+```
+
+
+
+
+
+## **REGRESIÓN LOGÍSTICA**
+
+Ahora vamos a desarrollar un modelo de regresión logística utilizando como variable dependiente nuestro Target e incluir nuestra segmentación kmeans como variable independiente. Es importante tener en cuenta que, aunque la regresión logística nos permite clasificar, se trata de un modelo de regresión que modela el logaritmo de la probabilidad de pertenecer a cada grupo (Tiene Diabetes o No Tiene Diabetes). La asignación final se hace en función de las probabilidades predichas.
+
+
+### **A.- Primero probamos una Regresión Logística simple (una variable independiente: nuestra segmentación Kmeans)**
+
+1. Determinaremos la capacidad predictora de las variables independientes cluster3 y cluster5 
+
+1.1. Target vs Cluster3
+```{r}
+library(pROC) 
+# La variable independiente ingresa como num?rico
+ROC1 <- roc(DatosEstadoNutricional_Final$target ~ as.numeric(DatosEstadoNutricional_Final$cluster3))
+
+print("Nivel predictibilidad de la variable independiente cluster3 sobre la variable dependiente es: ")
+print(ROC1)
+print("Intervalo de confianza de la curva ROC")
+print(ci.auc(ROC1))
+plot(ROC1)
+```
+
+Como se aprecia esta variable "Cluster3" no puede predecir nuestro Target (Tiene Diabetes / No Tiene Diabetes).
+
+
+1.1. Target vs Cluster5
+```{r}
+library(pROC) 
+# La variable independiente ingresa como num?rico
+ROC1 <- roc(DatosEstadoNutricional_Final$target ~ as.numeric(DatosEstadoNutricional_Final$cluster5))
+
+print("Nivel predictibilidad de la variable independiente cluster3 sobre la variable dependiente es: ")
+print(ROC1)
+print("Intervalo de confianza de la curva ROC")
+print(ci.auc(ROC1))
+plot(ROC1)
+```
+
+Como podemos apreciar la curva está por encuma de la diagonal, por lo tanto podemos decir que la variable "Cluster5" puede predecir a la variable Target. Nos quedamos con Cluster5.
+
+
+
+2. Vamos a preparar nuestro dataset con las variables categóricas a dummies.
+
+Convirtiendo variables cualitativas en Dummy
+```{r}
+library(dummy)
+Variables_dummy <- dummy(DatosEstadoNutricional_Final[, c(3, 19, 20, 21, 22, 25)])
+View(Variables_dummy)
+```
+
+
+
+Datos para la Regresión Logística
+```{r}
+library(dplyr)
+DatosEstadoNutricional_Final_RL <- bind_cols(DatosEstadoNutricional_Final[,c("talla", "edad", "peso_kg", "circun_cuello", "IMC", "circun_cintura", "cadera", "ind_cintura_cadera", "ind_cintura_estatura", "por_grasa_corporal", "masa_corporal_magra_kg", "pliegue_cutaneo_BICEPS", "pliegue_cutaneo_TRICEPS", "pliegue_cutaneo_ESCAPULAR", "pliegue_cutaneo_SUPRAILIACO", "target")],  Variables_dummy[, c("sexo_F", 
+#"sexo_M", 
+"clasif_diagnos_talla_edad_RIESGO.DE.TALLA.BAJA", 
+"clasif_diagnos_talla_edad_TALLA.BAJA", 
+#"clasif_diagnos_talla_edad_TALLA.NORMAL", 
+#"clasif_diagnos_IMC_NORMAL", 
+"clasif_diagnos_IMC_OBESIDAD", 
+"clasif_diagnos_IMC_RIESGO.DE.BAJO.PESO", 
+"clasif_diagnos_IMC_SOBREPESO", 
+"clasif_perimetro_abdominal_ALTO.RIESGO", 
+#"clasif_perimetro_abdominal_BAJO.RIESGO", 
+#"clasif_anemia_NO.PRESENTA.ANEMIA", 
+"clasif_anemia_PRESENTA.ANEMIA", 
+"cluster5_1", 
+"cluster5_2", 
+"cluster5_3", 
+"cluster5_4" 
+#"cluster5_5" 
+)])
+
+save(DatosEstadoNutricional_Final_RL, file = "Datos/DatosEstadoNutricional_Final_RL") # Guardamos
+load("Datos/DatosEstadoNutricional_Final_RL") #abrimos
+
+View(DatosEstadoNutricional_Final_RL)
+```
+
+
+Todas las variables deben ser numéricas:
+```{r}
+DatosEstadoNutricional_Final_RL <- DatosEstadoNutricional_Final_RL %>%
+  mutate_all(as.numeric)
+
+DatosEstadoNutricional_Final_RL$target <- ifelse(DatosEstadoNutricional_Final_RL$target == 1, 0, 1)
+
+head(DatosEstadoNutricional_Final_RL, 6)
+View(DatosEstadoNutricional_Final_RL)
+```
+
+
+
+3. Target vs Cluster5
+
+```{r}
+ModeloRegLog_Simple1 <- glm(target ~ cluster5_1 + cluster5_2 + cluster5_3 + cluster5_4, data = DatosEstadoNutricional_Final_RL, family = "binomial")
+summary(ModeloRegLog_Simple1)
+```
+
+
+```{r}
+ModeloRegLog_Simple2 <- glm(target ~ cluster5_1 + cluster5_2 + cluster5_4, data = DatosEstadoNutricional_Final_RL, family = "binomial")
+summary(ModeloRegLog_Simple2)
+```
+
+
+Calculamos el nivel de ajuste del modelo "R2 Ajustado""
+```{r}
+#install.packages("DescTools")
+library(DescTools)
+
+PseudoR2(ModeloRegLog_Simple2, c("McFadden", "Nagel"))
+# McFaden indica que el 75.8% de la variable dependiente es explicada por las variables independientes del modelo.
+
+```
+De acuerdo al Pseudo R^2 de Nagelkerke, 25% de la variable dependiente es explicada por la variables cluster5.
+
+
+
+Intervalo de confianza de los Coeficientes con un nivel de confianza del 95%
+```{r}
+exp(cbind(OR=coef(ModeloRegLog_Simple2), confint(ModeloRegLog_Simple2)))
+```
+
+
+Test de Hosmer Lemeshow
+Ho: El modelo es capaz de predecir los datos (Observados = Predichos)
+Ha: El modelo no es capaz de predecir los datos (Observados <> Predichos) 
+
+
+```{r}
+library(ResourceSelection)
+
+hoslem.test(ModeloRegLog_Simple2$y, fitted(ModeloRegLog_Simple2))
+
+```
+
+** Siendo que p-value > 0.05; no hay evidiencia para rechazar la Ho. Por lo tanto, el modelo es capaz de predecir la Tenencia de Diabetes a partir de nuestra clusterización.**
+
+Sin embargo, no estamos utilizando el resto de variable que son de interés, dado que son medidas antropométricas de suma importancia para ver la salud de los pacientes y muy posibles predictores de la Diabetes.
+
+
+
+
+### **B.- Finalmente, probamos una Regresión Logística Binaria Múltiple (con todas las variables dependientes)**
+
+
+```{r}
+ModeloRegLog_Multiple1 <- glm(target ~ ., data = DatosEstadoNutricional_Final_RL, family = "binomial")
+summary(ModeloRegLog_Multiple1)
+```
+
+Como se puede apreciar, con un nivel de confianza del 95% sólamente las variables IMC, cadera, ind_cintura_cadera y clasif_diagnos_IMC_RIESGO.DE.BAJO.PESO son importantes para el modelo.
+
+Vamos a probar eliminando paso a paso las variables que tienen el p-valor muy alto.
+
+
+
+**Eliminando las variable sexo, masa_corporal_magra_kg y cluster5_3**
+```{r}
+ModeloRegLog_Multiple2 <- glm(target ~ ind_cintura_estatura + circun_cintura + 
+pliegue_cutaneo_ESCAPULAR + pliegue_cutaneo_SUPRAILIACO + 
+clasif_diagnos_talla_edad_TALLA.BAJA + clasif_perimetro_abdominal_ALTO.RIESGO + 
+clasif_diagnos_IMC_OBESIDAD + cluster5_1 + 
+pliegue_cutaneo_BICEPS + talla + 
+sexo_F + pliegue_cutaneo_TRICEPS + 
+peso_kg + por_grasa_corporal + 
+circun_cuello + clasif_diagnos_talla_edad_RIESGO.DE.TALLA.BAJA + 
+cluster5_4 + clasif_anemia_PRESENTA.ANEMIA + 
+cluster5_2 + clasif_diagnos_IMC_SOBREPESO + 
+ind_cintura_cadera + cadera + 
+IMC + clasif_diagnos_IMC_RIESGO.DE.BAJO.PESO, data = DatosEstadoNutricional_Final_RL, family = "binomial")
+summary(ModeloRegLog_Multiple2)
+```
+
+Como se puede apreciar, ninguna variable de las que no eran significativas están cambiando. Por ello, y para simplificar podemos hacer uso de un algoritmo de importancia de variables llamado Boruta.
+
+
+```{r}
+# if (require("data.table")) install.packages("data.table")
+# if (require("Boruta")) install.packages("Boruta")
+
+library(data.table)
+library(Boruta)
+
+# Determinamops la importancia de los atributos mediante la función Boruta
+boruta.model <- Boruta(target~., data = DatosEstadoNutricional_Final_RL, doTrace = 2)
+plot(boruta.model)
+
+# Afinamos la importancia 
+boruta.model2 <- TentativeRoughFix(boruta.model)
+plot(boruta.model2)
+
+# Obtenemos un listado de nombres de variables seleccionados
+getSelectedAttributes(boruta.model2, withTentative = F)
+
+# Hacemos un ranking de importancia de las variables:
+x <- attStats(boruta.model2)
+ranking <- data.table(attribute=rownames(x), x)[order(-meanImp)]
+print(ranking)
+```
+
+Gracias a estas recomendaciones podríamos ir probando retirando variables 1 a 1, luego 2 a 2 y reingresando algunas, para finalmente quedarnos con un modelo que nos de un mejor ajuste (revisando el AIC).
+
+
+**Luego de interactuar con las todas las variables nos quedamos finalmente con: talla, clasif_diagnos_talla_edad_TALLA.BAJA, IMC, clasif_diagnos_IMC_RIESGO.DE.BAJO.PESO** 
+```{r}
+ModeloRegLog_Multiple3 <- glm(target ~ talla + clasif_diagnos_talla_edad_TALLA.BAJA + 
+IMC + clasif_diagnos_IMC_RIESGO.DE.BAJO.PESO, data = DatosEstadoNutricional_Final_RL, family = "binomial")
+summary(ModeloRegLog_Multiple3)
+```
+
+Como se puede apreciar, de acuerdo al AIC, este es el mejor modelo que pudimos lograr y ahora vamos a proseguir con los indicadores de ajuste.
+
+
+
+
+Calculamos el nivel de ajuste del modelo "R2 Ajustado""
+```{r}
+#install.packages("DescTools")
+library(DescTools)
+
+PseudoR2(ModeloRegLog_Multiple3, c("McFadden", "Nagel"))
+```
+
+De acuerdo al Pseudo R^2 de Nagelkerke, 34% de la variable dependiente es explicada por las variables independientes: talla, clasif_diagnos_talla_edad_TALLA.BAJA, IMC, clasif_diagnos_IMC_RIESGO.DE.BAJO.PESO.
+
+
+
+Intervalo de confianza de los Coeficientes con un nivel de confianza del 95%
+```{r}
+exp(cbind(OR=coef(ModeloRegLog_Multiple3), confint(ModeloRegLog_Multiple3)))
+```
+
+
+**Test de Hosmer Lemeshow**
+Ho: El modelo es capaz de predecir los datos (Observados = Predichos)
+Ha: El modelo no es capaz de predecir los datos (Observados <> Predichos) 
+
+```{r}
+library(ResourceSelection)
+
+hoslem.test(ModeloRegLog_Multiple3$y, fitted(ModeloRegLog_Multiple3))
+
+```
+
+** Siendo que p-value > 0.05; no hay evidiencia para rechazar la Ho. Por lo tanto, el modelo es capaz de predecir la Tenencia de Diabetes a partir de nuestras variables independientes: talla, clasif_diagnos_talla_edad_TALLA.BAJA, IMC, clasif_diagnos_IMC_RIESGO.DE.BAJO.PESO.**
+
+
+**Coeficientes del Modelo:**
+```{r}
+ModeloRegLog_Multiple3$coefficients
+```
+
+
+**Probabilidad calculada**
+```{r}
+ModeloRegLog_Multiple3_probCal <- as.data.frame(ModeloRegLog_Multiple3$fitted.values)
+ModeloRegLog_Multiple3_probCal
+View(ModeloRegLog_Multiple3_probCal)
+```
+
+
+** Clasificación:**
+```{r}
+ModeloRegLog_Multiple3_probCal$Predict <- cut(ModeloRegLog_Multiple3$fitted.values, breaks = c(0, 0.5, 1), labels = c("0","1"))
+ModeloRegLog_Multiple3_probCal
+View(ModeloRegLog_Multiple3_probCal)
+```
+
+
+Clasificación: Podemos establecer un punto de corte de 0.3 dado que en nuestra base real tenemos 122 casos con diabetes (target = 1):
+```{r}
+ModeloRegLog_Multiple3_probCal$Predict_PC30 <- cut(ModeloRegLog_Multiple3$fitted.values, breaks = c(0, 0.3, 1), labels = c("0","1"))
+ModeloRegLog_Multiple3_probCal
+View(ModeloRegLog_Multiple3_probCal)
+```
+
+
+Datos para la Regresión Logística
+```{r}
+library(dplyr)
+DatosEstadoNutricional_Final_Total <- bind_cols(DatosEstadoNutricional_Final_RL, ModeloRegLog_Multiple3_probCal)
+
+save(DatosEstadoNutricional_Final_Total, file = "Datos/DatosEstadoNutricional_Final_Total") # Guardamos
+load("Datos/DatosEstadoNutricional_Final_Total") #abrimos
+
+View(DatosEstadoNutricional_Final_Total)
+```
+
+
+
+**Matriz de confusión:**
+```{r}
+table(DatosEstadoNutricional_Final_Total$target, DatosEstadoNutricional_Final_Total$Predict_PC30)
+```
+
+**Accuracy: (470 + 63) / 652 = 81.75%**
+**Precisión: 63 / (60 + 63) = 51.22%**
+**Exhaustividad: 63 / (59 + 63) = 51.64%**
+
+De acuerdo al Accuracy, el modelo acierta el 82% de las veces. 
+
+La Precisión me indica que un 51% de los individuos de los que decimos tendrán Diabetes, en realidad sí tendrán Diabetes.
+
+La Exhaustividad me indica que un 52% de los individuos que en realidad tienes Diabetes, el modelo los ha predicho correctamente.
